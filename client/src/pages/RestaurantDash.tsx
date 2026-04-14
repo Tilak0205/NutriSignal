@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, UtensilsCrossed, QrCode, Brain, ClipboardList,
   MessageSquare, Plus, Trash2, Eye, EyeOff, Download, ChevronDown,
-  TrendingUp, Users, ShoppingBag as BagIcon, Star,
+  TrendingUp, ShoppingBag as BagIcon, Star,
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -93,7 +93,7 @@ export default function RestaurantDash() {
       <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-20 md:pb-6">
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} feedbacks={feedbacks} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setProfile={setProfile} load={load} flash={flash} />}
+            {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setProfile={setProfile} load={load} flash={flash} />}
             {tab === "menu" && <MenuTab categories={categories} load={load} flash={flash} />}
             {tab === "tables" && <TablesTab tables={tables} load={load} flash={flash} />}
             {tab === "insights" && <InsightsTab insights={insights} accent={accent} />}
@@ -116,8 +116,8 @@ export default function RestaurantDash() {
 }
 
 /* ---------- Overview ---------- */
-function OverviewTab({ accent, orders, insights, feedbacks, totalItems, tables, avgRating, pendingOrders, profile, setProfile, load, flash }: {
-  accent: string; orders: OrderData[]; insights: Insight[]; feedbacks: FeedbackData[]; totalItems: number; tables: Table[];
+function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, pendingOrders, profile, setProfile, load, flash }: {
+  accent: string; orders: OrderData[]; insights: Insight[]; totalItems: number; tables: Table[];
   avgRating: number; pendingOrders: number;
   profile: { name: string; brandPrimaryColor: string; brandSecondaryColor: string; description: string; address: string; phone: string };
   setProfile: (fn: (s: typeof profile) => typeof profile) => void; load: () => void; flash: (m: string) => void;

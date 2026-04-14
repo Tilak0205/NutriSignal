@@ -21,6 +21,10 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ message: err.message });
 });
 
-app.listen(env.port, () => {
-  console.log(`Server running on http://localhost:${env.port}`);
-});
+if (process.env.VERCEL !== "1") {
+  app.listen(env.port, () => {
+    console.log(`Server running on http://localhost:${env.port}`);
+  });
+}
+
+export default app;
