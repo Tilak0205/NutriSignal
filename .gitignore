@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.DS_Store
+*.log
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Project-specific
+server/.env
+server/dist/
+server/uploads/
+client/dist/

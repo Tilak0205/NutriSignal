@@ -1,0 +1,33 @@
+Restaurant - NutriSignal
+
+—> Super Admin 
+—> Restaurants - Admin
+—> User/Customer 
+
+
+—> Restaurant
+—> Able to create Account
+—> Features
+* Menu add/edit
+* QRs generation for tables
+* Add Profile (Name, logo, brand colours, password)
+* Roles & Access permissions (last priority)
+* Suggestion dashboard table wise (Suggestion & Menu order & Time)
+* Feedbacks
+* Daily basic Analytics
+* Subscription plan management
+
+—> User/Customer
+* QR scanning on table
+* Questionnaire
+* Thank you msg
+* Menu
+* Place order
+
+
+—> Super Admin
+* Add restaurant (all CRUD)
+* Subscriptions
+* Analytics
+* Super AI - User behaviour analysis and suggestions to restaurant
+* Later phase —> Menu suggestion

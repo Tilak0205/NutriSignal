@@ -1,0 +1,12 @@
+{
+  "name": "nutrisignal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NutriSignal restaurant mood-aware ordering platform",
+  "scripts": {
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "build:client": "npm --prefix client run build",
+    "build:server": "npm --prefix server run build"
+  }
+}

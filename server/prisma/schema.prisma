@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum SessionStatus {
+  QUESTIONNAIRE
+  MENU
+  ORDERED
+  COMPLETED
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  SERVED
+  COMPLETED
+}
+
+model SubscriptionPlan {
+  id        String       @id @default(cuid())
+  name      String
+  price     Float
+  features  Json
+  maxTables Int
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  restaurants Restaurant[]
+}
+
+model Restaurant {
+  id                  String      @id @default(cuid())
+  name                String
+  logo                String?
+  brandPrimaryColor   String      @default("#0ea5e9")
+  brandSecondaryColor String      @default("#22c55e")
+  description         String?
+  address             String?
+  phone               String?
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  subscriptionPlanId  String?
+  subscriptionPlan    SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
+  users               RestaurantUser[]
+  categories          MenuCategory[]
+  items               MenuItem[]
+  tables              RestaurantTable[]
+  sessions            CustomerSession[]
+  analyses            MoodAnalysis[]
+  orders              Order[]
+  feedbacks           Feedback[]
+}
+
+model RestaurantUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole
+  createdAt    DateTime @default(now())
+  restaurantId String?
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+}
+
+model MenuCategory {
+  id           String   @id @default(cuid())
+  name         String
+  displayOrder Int      @default(0)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items        MenuItem[]
+}
+
+model MenuItem {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  image        String?
+  isAvailable  Boolean  @default(true)
+  categoryId   String
+  restaurantId String
+  category     MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+}
+
+model RestaurantTable {
+  id           String   @id @default(cuid())
+  tableNumber  Int
+  qrCodeData   String   @unique
+  isActive     Boolean  @default(true)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  sessions     CustomerSession[]
+  analyses     MoodAnalysis[]
+  orders       Order[]
+}
+
+model CustomerSession {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  status       SessionStatus @default(QUESTIONNAIRE)
+  createdAt    DateTime @default(now())
+  tableId      String
+  restaurantId String
+  table        RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  questionnaire QuestionnaireResponse?
+  moodAnalysis MoodAnalysis?
+  order        Order?
+  feedback     Feedback?
+}
+
+model QuestionnaireResponse {
+  id         String   @id @default(cuid())
+  responses  Json
+  submittedAt DateTime @default(now())
+  sessionId  String   @unique
+  session    CustomerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model MoodAnalysis {
+  id             String   @id @default(cuid())
+  sentiment      String
+  keyInsights    Json
+  interactionTips Json
+  serviceApproach String
+  createdAt      DateTime @default(now())
+  sessionId      String   @unique
+  restaurantId   String
+  tableId        String
+  session        CustomerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table          RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id           String   @id @default(cuid())
+  status       OrderStatus @default(PENDING)
+  totalAmount  Float
+  notes        String?
+  createdAt    DateTime @default(now())
+  sessionId    String   @unique
+  restaurantId String
+  tableId      String
+  session      CustomerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table        RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id                  String @id @default(cuid())
+  quantity            Int
+  specialInstructions String?
+  orderId             String
+  menuItemId          String
+  order               Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem            MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id         String   @id @default(cuid())
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  sessionId  String   @unique
+  restaurantId String
+  session    CustomerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
