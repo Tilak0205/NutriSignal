@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Minus, Plus, Star, ChevronRight, PartyPopper, Utensils, Loader2 } from "lucide-react";
 import { api } from "../lib/api";
 
-type MenuItem = { id: string; name: string; price: number; description?: string; isAvailable?: boolean };
+type MenuItem = { id: string; name: string; price: number; description?: string; isAvailable?: boolean; images?: string[] };
 type Category = { id: string; name: string; items: MenuItem[] };
 type Restaurant = { id: string; name: string; logo?: string; brandPrimaryColor: string };
 
@@ -293,29 +293,43 @@ export default function CustomerFlow() {
                     {cat.items.filter((i) => i.isAvailable !== false).map((item) => {
                       const qty = cart[item.id] ?? 0;
                       return (
-                        <motion.div key={item.id} layout className="bg-white rounded-xl border border-slate-200 p-3.5 flex items-center justify-between gap-3 shadow-sm">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-slate-800 text-sm">{item.name}</div>
-                            {item.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{item.description}</div>}
-                            <div className="font-bold text-sm mt-1" style={{ color: accent }}>${item.price.toFixed(2)}</div>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            {qty > 0 && (
-                              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: "auto", opacity: 1 }} className="flex items-center gap-1.5">
-                                <button onClick={() => remove(item.id)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
-                                  <Minus className="w-3.5 h-3.5" />
-                                </button>
-                                <span className="text-sm font-bold w-5 text-center">{qty}</span>
-                              </motion.div>
+                        <motion.div key={item.id} layout className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                          <div className="flex items-center gap-3 p-3.5">
+                            {item.images?.[0] && (
+                              <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-slate-100">
+                                <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                              </div>
                             )}
-                            <button
-                              onClick={() => add(item.id)}
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-white shadow-sm transition-transform active:scale-90"
-                              style={{ background: accent }}
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-slate-800 text-sm">{item.name}</div>
+                              {item.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{item.description}</div>}
+                              <div className="font-bold text-sm mt-1" style={{ color: accent }}>${item.price.toFixed(2)}</div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {qty > 0 && (
+                                <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: "auto", opacity: 1 }} className="flex items-center gap-1.5">
+                                  <button onClick={() => remove(item.id)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </button>
+                                  <span className="text-sm font-bold w-5 text-center">{qty}</span>
+                                </motion.div>
+                              )}
+                              <button
+                                onClick={() => add(item.id)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center text-white shadow-sm transition-transform active:scale-90"
+                                style={{ background: accent }}
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
+                          {item.images && item.images.length > 1 && (
+                            <div className="flex gap-1.5 px-3.5 pb-3 overflow-x-auto">
+                              {item.images.slice(1).map((img, idx) => (
+                                <img key={idx} src={img} alt="" className="shrink-0 w-12 h-12 rounded-lg object-cover border border-slate-100" />
+                              ))}
+                            </div>
+                          )}
                         </motion.div>
                       );
                     })}

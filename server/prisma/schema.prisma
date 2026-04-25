@@ -89,7 +89,7 @@ model MenuItem {
   name         String
   description  String?
   price        Float
-  image        String?
+  images       String[] @default([])
   isAvailable  Boolean  @default(true)
   categoryId   String
   restaurantId String

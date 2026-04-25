@@ -1,19 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, UtensilsCrossed, QrCode, Brain, ClipboardList,
-  MessageSquare, Plus, Trash2, Eye, EyeOff, Download, ChevronDown,
-  TrendingUp, ShoppingBag as BagIcon, Star,
+  MessageSquare, Plus, Trash2, Eye, EyeOff, Download, ChevronDown, ChevronUp,
+  TrendingUp, ShoppingBag as BagIcon, Star, X, Upload, CheckCircle2,
+  AlertCircle, Clock, ArrowRight, Image as ImageIcon,
 } from "lucide-react";
 import { api } from "../lib/api";
 
+const MENU_CATEGORIES = ["Vegan", "Gluten-Free", "Vegetarian", "Non-Vegetarian", "Sweets", "Desserts", "Beverages", "Alcohol"] as const;
+
+function relativeTime(date: string): string {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function groupInsightsByDate(insights: Insight[]) {
+  const map = new Map<string, Insight[]>();
+  for (const i of insights) {
+    const d = new Date(i.createdAt).toDateString();
+    const group = map.get(d) ?? [];
+    group.push(i);
+    map.set(d, group);
+  }
+  const todayStr = new Date().toDateString();
+  const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+  return Array.from(map.entries()).map(([dateStr, items]) => {
+    let label = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+    if (dateStr === todayStr) label = "Today";
+    else if (dateStr === yesterdayStr) label = "Yesterday";
+    return { dateStr, label, items, isRecent: dateStr === todayStr || dateStr === yesterdayStr };
+  });
+}
+
 type Category = { id: string; name: string; items: Item[] };
-type Item = { id: string; name: string; price: number; description?: string; isAvailable: boolean; categoryId: string };
+type Item = { id: string; name: string; price: number; description?: string; isAvailable: boolean; categoryId: string; images: string[] };
 type Table = { id: string; tableNumber: number };
 type Insight = { id: string; sentiment: string; keyInsights: string[]; interactionTips: string[]; serviceApproach: string; createdAt: string; table: { tableNumber: number } };
 type OrderData = { id: string; status: string; totalAmount: number; createdAt: string; notes?: string; table: { tableNumber: number }; items: { quantity: number; specialInstructions?: string; menuItem: { name: string; price: number } }[] };
 type FeedbackData = { id: string; rating: number; comment?: string; createdAt: string };
-
 type Tab = "overview" | "menu" | "tables" | "insights" | "orders" | "feedback";
 
 const NAV: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
@@ -27,6 +58,7 @@ const NAV: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
 
 export default function RestaurantDash() {
   const [tab, setTab] = useState<Tab>("overview");
+  const [highlightInsightId, setHighlightInsightId] = useState("");
   const [profile, setProfile] = useState({ name: "", brandPrimaryColor: "#0ea5e9", brandSecondaryColor: "#22c55e", description: "", address: "", phone: "" });
   const [categories, setCategories] = useState<Category[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -53,9 +85,10 @@ export default function RestaurantDash() {
   const avgRating = feedbacks.length ? (feedbacks.reduce((s, f) => s + f.rating, 0) / feedbacks.length) : 0;
   const pendingOrders = orders.filter((o) => o.status === "PENDING").length;
 
+  const goToInsight = (id: string) => { setHighlightInsightId(id); setTab("insights"); };
+
   return (
     <div className="min-h-[calc(100dvh-52px)] flex">
-      {/* Sidebar */}
       <aside className="w-56 shrink-0 bg-white border-r border-slate-200 hidden md:flex flex-col py-4">
         <div className="px-4 mb-4">
           <div className="text-sm font-bold text-slate-800 truncate">{profile.name || "Restaurant"}</div>
@@ -75,7 +108,6 @@ export default function RestaurantDash() {
         })}
       </aside>
 
-      {/* Mobile tabs */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex z-40">
         {NAV.map((n) => {
           const Icon = n.icon;
@@ -89,21 +121,19 @@ export default function RestaurantDash() {
         })}
       </div>
 
-      {/* Content */}
       <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-20 md:pb-6">
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setProfile={setProfile} load={load} flash={flash} />}
+            {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setProfile={setProfile} load={load} flash={flash} setTab={setTab} goToInsight={goToInsight} />}
             {tab === "menu" && <MenuTab categories={categories} load={load} flash={flash} />}
             {tab === "tables" && <TablesTab tables={tables} load={load} flash={flash} />}
-            {tab === "insights" && <InsightsTab insights={insights} accent={accent} />}
+            {tab === "insights" && <InsightsTab insights={insights} accent={accent} highlightInsightId={highlightInsightId} />}
             {tab === "orders" && <OrdersTab orders={orders} load={load} flash={flash} accent={accent} />}
             {tab === "feedback" && <FeedbackTab feedbacks={feedbacks} avgRating={avgRating} />}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
@@ -116,14 +146,25 @@ export default function RestaurantDash() {
 }
 
 /* ---------- Overview ---------- */
-function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, pendingOrders, profile, setProfile, load, flash }: {
+function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, pendingOrders, profile, setProfile, load, flash, setTab, goToInsight }: {
   accent: string; orders: OrderData[]; insights: Insight[]; totalItems: number; tables: Table[];
   avgRating: number; pendingOrders: number;
   profile: { name: string; brandPrimaryColor: string; brandSecondaryColor: string; description: string; address: string; phone: string };
   setProfile: (fn: (s: typeof profile) => typeof profile) => void; load: () => void; flash: (m: string) => void;
+  setTab: (tab: Tab) => void; goToInsight: (id: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const save = async () => { await api.put("/restaurant/profile", profile); load(); flash("Profile saved"); setEditing(false); };
+
+  const sentimentBadge: Record<string, string> = { positive: "bg-emerald-100 text-emerald-700", negative: "bg-red-100 text-red-700", neutral: "bg-amber-100 text-amber-700" };
+  const sentimentBorder: Record<string, string> = { positive: "border-l-emerald-400", negative: "border-l-red-400", neutral: "border-l-amber-400" };
+
+  const recentInsights = insights.slice(0, 3);
+  const todayStr = new Date().toDateString();
+  const todayInsights = insights.filter(i => new Date(i.createdAt).toDateString() === todayStr);
+  const mostDelayed = todayInsights.length > 1
+    ? todayInsights[todayInsights.length - 1]
+    : insights.length > 1 ? insights[insights.length - 1] : null;
 
   const stats = [
     { label: "Orders", value: orders.length, icon: BagIcon, color: "bg-sky-50 text-sky-600" },
@@ -153,6 +194,69 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
           );
         })}
       </div>
+
+      {/* Recent Insights */}
+      {recentInsights.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-sm text-slate-700 flex items-center gap-1.5">
+              <Brain className="w-4 h-4 text-purple-500" /> Recent Insights
+            </h3>
+            <button onClick={() => setTab("insights")} className="text-xs text-sky-500 hover:text-sky-600 font-medium flex items-center gap-0.5">
+              View all <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {recentInsights.map((insight) => (
+              <button
+                key={insight.id}
+                onClick={() => goToInsight(insight.id)}
+                className={`w-full text-left bg-white border border-slate-200 border-l-4 ${sentimentBorder[insight.sentiment] ?? "border-l-slate-300"} rounded-xl p-3 hover:shadow-md transition-shadow flex items-center gap-3`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold text-slate-800">Table {insight.table.tableNumber}</span>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${sentimentBadge[insight.sentiment] ?? ""}`}>{insight.sentiment}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate">{(insight.interactionTips as string[])[0] ?? insight.serviceApproach}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-medium text-slate-500">{relativeTime(insight.createdAt)}</div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-300 mt-1 ml-auto" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Most Delayed / Needs Attention */}
+      {mostDelayed && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-sm text-slate-700 flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-amber-500" /> Needs Attention
+            </h3>
+            <span className="text-xs text-slate-400">Oldest unaddressed</span>
+          </div>
+          <button
+            onClick={() => goToInsight(mostDelayed.id)}
+            className="w-full text-left bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl p-3 hover:shadow-md transition-shadow flex items-center gap-3"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-sm font-semibold text-slate-800">Table {mostDelayed.table.tableNumber}</span>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${sentimentBadge[mostDelayed.sentiment] ?? ""}`}>{mostDelayed.sentiment}</span>
+              </div>
+              <p className="text-xs text-slate-500 truncate">{(mostDelayed.interactionTips as string[])[0] ?? mostDelayed.serviceApproach}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-xs font-bold text-amber-600">{relativeTime(mostDelayed.createdAt)}</div>
+              <ArrowRight className="w-3.5 h-3.5 text-amber-400 mt-1 ml-auto" />
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Profile card */}
       <div className="bg-white rounded-xl border border-slate-200 p-4">
@@ -195,16 +299,52 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
 /* ---------- Menu ---------- */
 function MenuTab({ categories, load, flash }: { categories: Category[]; load: () => void; flash: (m: string) => void }) {
   const [newCat, setNewCat] = useState("");
-  const [newItem, setNewItem] = useState({ name: "", price: 0, description: "", categoryId: "" });
+  const [newItem, setNewItem] = useState<{ name: string; price: number; description: string; categoryId: string; images: string[] }>({ name: "", price: 0, description: "", categoryId: "", images: [] });
   const [showAddItem, setShowAddItem] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const addCat = async () => { if (!newCat.trim()) return; await api.post("/restaurant/menu/categories", { name: newCat.trim() }); setNewCat(""); load(); flash("Category added"); };
-  const delCat = async (id: string, name: string) => { if (!confirm(`Delete "${name}" and all items?`)) return; await api.delete(`/restaurant/menu/categories/${id}`); load(); flash("Category deleted"); };
+  const availableCategories = MENU_CATEGORIES.filter(cat => !categories.some(c => c.name === cat));
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setNewItem(s => {
+          if (s.images.length >= 5) return s;
+          return { ...s, images: [...s.images, result] };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const addCat = async () => {
+    if (!newCat) return;
+    try {
+      await api.post("/restaurant/menu/categories", { name: newCat });
+      setNewCat(""); load(); flash("Category added");
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      flash(msg ?? "Failed to add category");
+    }
+  };
+
+  const delCat = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}" and all its items?`)) return;
+    await api.delete(`/restaurant/menu/categories/${id}`); load(); flash("Category deleted");
+  };
+
   const addItem = async () => {
     if (!newItem.name.trim() || !newItem.categoryId || newItem.price <= 0) return;
-    await api.post("/restaurant/menu/items", { name: newItem.name.trim(), price: newItem.price, description: newItem.description, categoryId: newItem.categoryId });
-    setNewItem({ name: "", price: 0, description: "", categoryId: "" }); load(); flash("Item added"); setShowAddItem(false);
+    await api.post("/restaurant/menu/items", { name: newItem.name.trim(), price: newItem.price, description: newItem.description, categoryId: newItem.categoryId, images: newItem.images });
+    setNewItem({ name: "", price: 0, description: "", categoryId: "", images: [] });
+    load(); flash("Item added"); setShowAddItem(false);
   };
+
   const delItem = async (id: string) => { await api.delete(`/restaurant/menu/items/${id}`); load(); flash("Item removed"); };
   const toggleItem = async (id: string, current: boolean) => { await api.put(`/restaurant/menu/items/${id}`, { isAvailable: !current }); load(); };
 
@@ -226,13 +366,51 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
                 <input type="number" min={0} step={0.01} value={newItem.price || ""} onChange={(e) => setNewItem((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="Price" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
               </div>
               <input value={newItem.description} onChange={(e) => setNewItem((s) => ({ ...s, description: e.target.value }))} placeholder="Description (optional)" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-              <div className="flex gap-3">
-                <select value={newItem.categoryId} onChange={(e) => setNewItem((s) => ({ ...s, categoryId: e.target.value }))} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200">
-                  <option value="">Select category...</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <button onClick={addItem} className="bg-sky-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-sky-600">Save</button>
+              <select value={newItem.categoryId} onChange={(e) => setNewItem((s) => ({ ...s, categoryId: e.target.value }))} className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200">
+                <option value="">Select category...</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+
+              {/* Image upload */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5" /> Photos <span className="text-slate-300">(optional, up to 5)</span>
+                  </span>
+                  <span className={`text-xs font-semibold ${newItem.images.length >= 5 ? "text-amber-500" : "text-slate-400"}`}>{newItem.images.length}/5</span>
+                </div>
+                {newItem.images.length < 5 && (
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50 scale-[1.01]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
+                  >
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <span className="text-xs text-slate-400">Drop images here or <span className="text-sky-500 font-medium">browse</span></span>
+                    <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+                  </div>
+                )}
+                {newItem.images.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {newItem.images.map((img, idx) => (
+                      <div key={idx} className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-slate-200 group">
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setNewItem(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) })); }}
+                          className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              <button onClick={addItem} className="bg-sky-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-sky-600 transition-colors">Save Item</button>
             </div>
           </motion.div>
         )}
@@ -240,9 +418,22 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
 
       {/* Add category */}
       <div className="flex gap-2">
-        <input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="New category name" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" onKeyDown={(e) => e.key === "Enter" && addCat()} />
-        <button onClick={addCat} className="bg-slate-100 text-slate-600 text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors">Add Category</button>
+        <select
+          value={newCat}
+          onChange={(e) => setNewCat(e.target.value)}
+          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white"
+        >
+          <option value="">Select a category to add...</option>
+          {availableCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+        </select>
+        <button onClick={addCat} disabled={!newCat} className="bg-slate-100 text-slate-600 text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40">
+          Add Category
+        </button>
       </div>
+
+      {availableCategories.length === 0 && (
+        <p className="text-xs text-slate-400 text-center py-1">All categories have been added.</p>
+      )}
 
       {categories.map((cat) => (
         <div key={cat.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -254,8 +445,22 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
             <button onClick={() => delCat(cat.id, cat.name)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
           </div>
           {cat.items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 last:border-0">
-              <div>
+            <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 last:border-0">
+              {item.images?.[0] ? (
+                <div className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-slate-100">
+                  <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                  {item.images.length > 1 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <span className="text-white text-[9px] font-bold">+{item.images.length - 1}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="shrink-0 w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <ImageIcon className="w-4 h-4 text-slate-300" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
                 <div className={`text-sm font-medium ${item.isAvailable ? "text-slate-800" : "text-slate-400 line-through"}`}>{item.name}</div>
                 <div className="text-xs text-slate-400">${item.price.toFixed(2)}</div>
               </div>
@@ -316,33 +521,211 @@ function TablesTab({ tables, load, flash }: { tables: Table[]; load: () => void;
 }
 
 /* ---------- Insights ---------- */
-function InsightsTab({ insights, accent }: { insights: Insight[]; accent: string }) {
-  if (!insights.length) return <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400"><Brain className="w-10 h-10 mx-auto mb-2 opacity-40" /><p>No insights yet. They appear after customers complete the questionnaire.</p></div>;
+function InsightsTab({ insights, accent, highlightInsightId }: { insights: Insight[]; accent: string; highlightInsightId: string }) {
+  const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [sentimentFilter, setSentimentFilter] = useState("all");
+  const [tableFilter, setTableFilter] = useState("");
 
-  const sentimentColors: Record<string, string> = { positive: "border-l-emerald-400 bg-emerald-50/40", negative: "border-l-red-400 bg-red-50/40", neutral: "border-l-amber-400 bg-amber-50/40" };
-  const sentimentBadge: Record<string, string> = { positive: "bg-emerald-100 text-emerald-700", negative: "bg-red-100 text-red-700", neutral: "bg-amber-100 text-amber-700" };
+  const todayStr = new Date().toDateString();
+  const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+
+  const isGroupExpanded = (dateStr: string): boolean => {
+    if (dateStr in groupOverrides) return groupOverrides[dateStr];
+    return dateStr === todayStr || dateStr === yesterdayStr;
+  };
+
+  const toggleGroup = (dateStr: string) => {
+    setGroupOverrides(prev => ({ ...prev, [dateStr]: !isGroupExpanded(dateStr) }));
+  };
+
+  const sentimentConfig: Record<string, { icon: typeof CheckCircle2; badgeClass: string; borderClass: string; bgClass: string; iconColor: string }> = {
+    positive: { icon: CheckCircle2, badgeClass: "bg-emerald-100 text-emerald-700", borderClass: "border-l-emerald-400", bgClass: "bg-emerald-50/30", iconColor: "#10b981" },
+    negative: { icon: AlertCircle, badgeClass: "bg-red-100 text-red-700", borderClass: "border-l-red-400", bgClass: "bg-red-50/30", iconColor: "#ef4444" },
+    neutral: { icon: Clock, badgeClass: "bg-amber-100 text-amber-700", borderClass: "border-l-amber-400", bgClass: "bg-amber-50/30", iconColor: "#f59e0b" },
+  };
+
+  const filteredInsights = useMemo(() => insights.filter(i => {
+    if (sentimentFilter !== "all" && i.sentiment !== sentimentFilter) return false;
+    if (tableFilter && !String(i.table.tableNumber).includes(tableFilter.trim())) return false;
+    return true;
+  }), [insights, sentimentFilter, tableFilter]);
+
+  const groups = useMemo(() => groupInsightsByDate(filteredInsights), [filteredInsights]);
+
+  useEffect(() => {
+    if (!highlightInsightId) return;
+    for (const group of groups) {
+      if (group.items.some(i => i.id === highlightInsightId)) {
+        setGroupOverrides(prev => ({ ...prev, [group.dateStr]: true }));
+        setExpandedCards(prev => ({ ...prev, [highlightInsightId]: true }));
+        break;
+      }
+    }
+    const timer = setTimeout(() => {
+      document.querySelector(`[data-insight-id="${highlightInsightId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 400);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightInsightId]);
+
+  if (!insights.length) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">
+        <Brain className="w-10 h-10 mx-auto mb-2 opacity-40" />
+        <p>No insights yet. They appear after customers complete the questionnaire.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      <div><h2 className="text-lg font-bold text-slate-800">Mood Insights</h2><p className="text-sm text-slate-400">AI-powered analysis of customer moods</p></div>
-      {insights.map((i) => (
-        <div key={i.id} className={`rounded-xl border-l-4 border border-slate-200 p-4 ${sentimentColors[i.sentiment] ?? ""}`}>
-          <div className="flex items-center justify-between mb-2">
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold text-slate-800">Mood Insights</h2>
+        <p className="text-sm text-slate-400">AI-powered customer mood analysis — {insights.length} total</p>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 gap-0.5">
+          {["all", "positive", "neutral", "negative"].map(f => (
+            <button
+              key={f}
+              onClick={() => setSentimentFilter(f)}
+              className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors capitalize ${sentimentFilter === f ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+            >{f}</button>
+          ))}
+        </div>
+        <input
+          value={tableFilter}
+          onChange={e => setTableFilter(e.target.value)}
+          placeholder="Table #"
+          className="w-20 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-200"
+        />
+        {(sentimentFilter !== "all" || tableFilter) && (
+          <button onClick={() => { setSentimentFilter("all"); setTableFilter(""); }} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
+            <X className="w-3 h-3" /> Clear
+          </button>
+        )}
+      </div>
+
+      {filteredInsights.length === 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">
+          <p>No insights match your filter.</p>
+        </div>
+      )}
+
+      {/* Date groups */}
+      {groups.map(group => (
+        <div key={group.dateStr}>
+          <button
+            onClick={() => toggleGroup(group.dateStr)}
+            className="w-full flex items-center justify-between px-1 mb-2 group"
+          >
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-slate-800">Table {i.table.tableNumber}</span>
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${sentimentBadge[i.sentiment] ?? ""}`}>{i.sentiment}</span>
+              <span className="text-sm font-bold text-slate-700">{group.label}</span>
+              <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                {group.items.length} insight{group.items.length !== 1 ? "s" : ""}
+              </span>
             </div>
-            <span className="text-[10px] text-slate-400">{new Date(i.createdAt).toLocaleString()}</span>
-          </div>
-          <p className="text-sm text-slate-600 mb-3">{i.serviceApproach}</p>
-          <div className="space-y-1">
-            {(i.interactionTips as string[]).map((tip, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-sm">
-                <span className="font-bold mt-0.5" style={{ color: accent }}>→</span>
-                <span className="text-slate-600">{tip}</span>
-              </div>
-            ))}
-          </div>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isGroupExpanded(group.dateStr) ? "bg-slate-200" : "bg-slate-100 group-hover:bg-slate-200"}`}>
+              {isGroupExpanded(group.dateStr) ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {isGroupExpanded(group.dateStr) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden space-y-2"
+              >
+                {group.items.map(insight => {
+                  const conf = sentimentConfig[insight.sentiment] ?? sentimentConfig.neutral;
+                  const SentimentIcon = conf.icon;
+                  const isExpanded = !!expandedCards[insight.id];
+                  const isHighlighted = insight.id === highlightInsightId;
+
+                  return (
+                    <motion.div
+                      key={insight.id}
+                      layout
+                      data-insight-id={insight.id}
+                      className={`rounded-xl border-l-4 border ${conf.borderClass} border-slate-200 overflow-hidden ${conf.bgClass} ${isHighlighted ? "ring-2 ring-sky-400 shadow-lg shadow-sky-100" : ""}`}
+                    >
+                      <button
+                        onClick={() => setExpandedCards(prev => ({ ...prev, [insight.id]: !isExpanded }))}
+                        className="w-full text-left p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <SentimentIcon className="w-4 h-4 shrink-0" style={{ color: conf.iconColor }} />
+                            <span className="font-semibold text-sm text-slate-800">Table {insight.table.tableNumber}</span>
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${conf.badgeClass}`}>{insight.sentiment}</span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-bold text-slate-700 tabular-nums">{relativeTime(insight.createdAt)}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {new Date(insight.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {!isExpanded && (
+                          <p className="text-xs text-slate-500 mt-2 truncate">
+                            {(insight.interactionTips as string[])[0] ?? insight.serviceApproach}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-1 mt-2 text-[10px] font-medium text-slate-400">
+                          {isExpanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show details</>}
+                        </div>
+                      </button>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                            className="overflow-hidden px-4 pb-4 space-y-3"
+                          >
+                            <p className="text-sm text-slate-600 border-t border-slate-200/60 pt-3">{insight.serviceApproach}</p>
+
+                            {(insight.keyInsights as string[]).length > 0 && (
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Key Insights</div>
+                                {(insight.keyInsights as string[]).map((ki, idx) => (
+                                  <div key={idx} className="flex items-start gap-2 text-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-[5px]" />
+                                    <span className="text-slate-700">{ki}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tips for Staff</div>
+                              {(insight.interactionTips as string[]).map((tip, idx) => (
+                                <div key={idx} className="flex items-start gap-2 text-sm">
+                                  <span className="font-bold mt-0.5 shrink-0" style={{ color: accent }}>→</span>
+                                  <span className="text-slate-600">{tip}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ))}
     </div>

@@ -8,7 +8,7 @@ import adminRoutes from "./routes/admin.js";
 
 const app = express();
 app.use(cors({ origin: (_origin, cb) => cb(null, true), credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use("/uploads", express.static("uploads"));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

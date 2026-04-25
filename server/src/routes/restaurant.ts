@@ -8,6 +8,8 @@ import { prisma } from "../config/prisma.js";
 const router = Router();
 router.use(requireAuth, requireRole([UserRole.OWNER, UserRole.MANAGER, UserRole.STAFF]));
 
+const MENU_CATEGORIES = ["Vegan", "Gluten-Free", "Vegetarian", "Non-Vegetarian", "Sweets", "Desserts", "Beverages", "Alcohol"] as const;
+
 router.get("/profile", async (req, res) => {
   const restaurant = await prisma.restaurant.findUnique({ where: { id: req.user?.restaurantId ?? "" } });
   res.json(restaurant);
@@ -31,15 +33,28 @@ router.get("/menu/categories", async (req, res) => {
 });
 
 router.post("/menu/categories", async (req, res) => {
+  const { name } = req.body as { name: string };
+  if (!name || !(MENU_CATEGORIES as readonly string[]).includes(name)) {
+    return res.status(400).json({ message: "Invalid category. Must be one of the predefined dietary categories." });
+  }
+  const restaurantId = req.user?.restaurantId ?? "";
+  const existing = await prisma.menuCategory.findFirst({ where: { name, restaurantId } });
+  if (existing) return res.status(400).json({ message: `"${name}" category already exists.` });
   const category = await prisma.menuCategory.create({
-    data: { name: req.body.name, displayOrder: req.body.displayOrder ?? 0, restaurantId: req.user?.restaurantId ?? "" },
+    data: { name, displayOrder: req.body.displayOrder ?? 0, restaurantId },
   });
   res.status(201).json(category);
 });
 
 router.post("/menu/items", async (req, res) => {
+  const { name, description, price, categoryId, isAvailable, images } = req.body as {
+    name: string; description?: string; price: number; categoryId: string; isAvailable?: boolean; images?: string[];
+  };
+  const validatedImages = (Array.isArray(images) ? images : [])
+    .slice(0, 5)
+    .filter((img: string) => typeof img === "string" && img.startsWith("data:image/"));
   const item = await prisma.menuItem.create({
-    data: { ...req.body, restaurantId: req.user?.restaurantId ?? "" },
+    data: { name, description, price, categoryId, isAvailable: isAvailable ?? true, images: validatedImages, restaurantId: req.user?.restaurantId ?? "" },
   });
   res.status(201).json(item);
 });
@@ -49,10 +64,21 @@ router.put("/menu/items/:id", async (req, res) => {
     where: { id: req.params.id, restaurantId: req.user?.restaurantId ?? "" },
   });
   if (!existing) return res.status(404).json({ message: "Menu item not found" });
-  const item = await prisma.menuItem.update({
-    where: { id: req.params.id },
-    data: req.body,
-  });
+  const { name, description, price, categoryId, isAvailable, images } = req.body as {
+    name?: string; description?: string; price?: number; categoryId?: string; isAvailable?: boolean; images?: string[];
+  };
+  const updateData: Record<string, unknown> = {};
+  if (name !== undefined) updateData.name = name;
+  if (description !== undefined) updateData.description = description;
+  if (price !== undefined) updateData.price = price;
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
+  if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
+  if (images !== undefined) {
+    updateData.images = (Array.isArray(images) ? images : [])
+      .slice(0, 5)
+      .filter((img: string) => typeof img === "string" && img.startsWith("data:image/"));
+  }
+  const item = await prisma.menuItem.update({ where: { id: req.params.id }, data: updateData });
   res.json(item);
 });
 
