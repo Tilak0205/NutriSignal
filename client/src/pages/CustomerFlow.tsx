@@ -10,39 +10,27 @@ type Restaurant = { id: string; name: string; logo?: string; brandPrimaryColor: 
 
 const QUESTIONS = [
   {
-    key: "feeling", label: "How are you feeling?", sub: "Be honest — it helps us serve you better",
+    key: "emotionalState", label: "What best describes you right now?", sub: "No wrong answers — just go with your gut",
     options: [
-      { value: "great", label: "Great", emoji: "😊" },
-      { value: "good", label: "Good", emoji: "😌" },
-      { value: "okay", label: "Okay", emoji: "😐" },
-      { value: "tired", label: "Tired", emoji: "😫" },
-      { value: "stressed", label: "Stressed", emoji: "😰" },
+      { value: "cheerful", label: "Cheerful & upbeat", emoji: "😊" },
+      { value: "calm", label: "Calm & peaceful", emoji: "😌" },
+      { value: "restless", label: "Restless & on edge", emoji: "😤" },
+      { value: "drained", label: "Drained & low", emoji: "😮‍💨" },
+      { value: "indifferent", label: "Just... meh", emoji: "😶" },
     ],
   },
   {
-    key: "mood", label: "What's your mood?", sub: "Pick the closest match",
+    key: "dayContext", label: "How has your day been?", sub: "Just a quick check-in",
     options: [
-      { value: "happy", label: "Happy", emoji: "😄" },
-      { value: "relaxed", label: "Relaxed", emoji: "🧘" },
-      { value: "excited", label: "Excited", emoji: "🤩" },
-      { value: "sad", label: "Sad", emoji: "😢" },
-      { value: "anxious", label: "Anxious", emoji: "😰" },
-      { value: "neutral", label: "Neutral", emoji: "😐" },
+      { value: "great-day", label: "Amazing day", emoji: "☀️" },
+      { value: "normal-day", label: "Pretty normal", emoji: "🌤️" },
+      { value: "long-day", label: "Long day, need a break", emoji: "🌙" },
+      { value: "tough-day", label: "Rough one", emoji: "🌧️" },
+      { value: "special-day", label: "Something special happened", emoji: "🌟" },
     ],
   },
   {
-    key: "cravings", label: "Any cravings?", sub: "What sounds good right now?",
-    options: [
-      { value: "sweet", label: "Sweet", emoji: "🍰" },
-      { value: "savory", label: "Savory", emoji: "🥩" },
-      { value: "spicy", label: "Spicy", emoji: "🌶️" },
-      { value: "light", label: "Light", emoji: "🥗" },
-      { value: "heavy", label: "Heavy", emoji: "🍖" },
-      { value: "comfort food", label: "Comfort", emoji: "🍲" },
-    ],
-  },
-  {
-    key: "energy", label: "Energy level?", sub: "How charged are you?",
+    key: "energy", label: "How charged are you?", sub: "Your energy level right now",
     options: [
       { value: "low", label: "Low", emoji: "🔋" },
       { value: "medium", label: "Medium", emoji: "⚡" },
@@ -57,6 +45,17 @@ const QUESTIONS = [
       { value: "date", label: "Date", emoji: "💕" },
       { value: "business", label: "Business", emoji: "💼" },
       { value: "family", label: "Family", emoji: "👨‍👩‍👧‍👦" },
+    ],
+  },
+  {
+    key: "cravings", label: "What sounds good right now?", sub: "Go with your gut feeling",
+    options: [
+      { value: "sweet", label: "Sweet", emoji: "🍰" },
+      { value: "savory", label: "Savory", emoji: "🥩" },
+      { value: "spicy", label: "Spicy", emoji: "🌶️" },
+      { value: "light", label: "Light", emoji: "🥗" },
+      { value: "heavy", label: "Heavy", emoji: "🍖" },
+      { value: "comfort food", label: "Comfort", emoji: "🍲" },
     ],
   },
   {
@@ -87,7 +86,9 @@ export default function CustomerFlow() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [tableNumber, setTableNumber] = useState(0);
   const [qIdx, setQIdx] = useState(0);
-  const [form, setForm] = useState<Record<string, string>>({ feeling: "", mood: "", cravings: "", energy: "", occasion: "", dietaryPreference: "" });
+  const [form, setForm] = useState<Record<string, string>>({
+    emotionalState: "", dayContext: "", energy: "", occasion: "", cravings: "", dietaryPreference: "",
+  });
   const [menu, setMenu] = useState<Category[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [rating, setRating] = useState(0);

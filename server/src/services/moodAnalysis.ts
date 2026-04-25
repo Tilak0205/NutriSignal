@@ -1,9 +1,9 @@
 type QuestionnaireInput = {
-  feeling: string;
-  mood: string;
-  cravings: string;
+  emotionalState: string;
+  dayContext: string;
   energy: string;
   occasion: string;
+  cravings: string;
   dietaryPreference: string;
 };
 
@@ -29,33 +29,64 @@ function extractJson(text: string): AnalysisOutput | null {
 }
 
 function fallbackAnalysis(input: QuestionnaireInput): AnalysisOutput {
-  const negativeSignals = ["stressed", "sad", "anxious", "tired", "low"];
-  const isNegative = negativeSignals.some((s) =>
-    [input.feeling, input.mood, input.energy].join(" ").toLowerCase().includes(s),
-  );
-  const sentiment = isNegative ? "negative" : "positive";
+  const negStates = new Set(["drained", "restless"]);
+  const negDays = new Set(["tough-day", "long-day"]);
+  const posDays = new Set(["great-day", "special-day"]);
+  const isNegative =
+    negStates.has(input.emotionalState) ||
+    negDays.has(input.dayContext) ||
+    input.energy === "low";
+
+  const isPositive =
+    !isNegative &&
+    (posDays.has(input.dayContext) || input.energy === "high" || ["cheerful", "calm"].includes(input.emotionalState));
+
+  const sentiment: "positive" | "neutral" | "negative" = isNegative
+    ? "negative"
+    : isPositive
+      ? "positive"
+      : "neutral";
+
   return {
     sentiment,
     keyInsights: [
-      `Customer reports mood: ${input.mood}.`,
-      `Current craving: ${input.cravings}.`,
-      `Occasion context: ${input.occasion}.`,
+      `Current state: ${input.emotionalState}. Day: ${input.dayContext}. Energy: ${input.energy}.`,
+      `Craving style: ${input.cravings}. Occasion: ${input.occasion}.`,
+      `Diet: ${input.dietaryPreference}.`,
     ],
-    interactionTips: isNegative
-      ? ["Greet calmly and warmly.", "Keep communication clear and concise.", "Recommend comforting menu items."]
-      : ["Be energetic and welcoming.", "Suggest specials confidently.", "Offer quick personalized recommendations."],
-    serviceApproach: isNegative
-      ? "Use a patient and low-pressure approach, focusing on comfort and fast service."
-      : "Use a friendly and upbeat approach, with proactive recommendations.",
+    interactionTips:
+      sentiment === "negative"
+        ? [
+            "Greet warmly and read their pace; avoid rushing the table.",
+            "Favor clear menu suggestions and calming options when recommending dishes.",
+            "Acknowledge their state subtly without prying; keep the tone low-pressure.",
+          ]
+        : sentiment === "positive"
+          ? [
+              "Match a friendly, upbeat tone; celebrate their occasion if appropriate.",
+              "Offer confident recommendations and highlight specials that fit their craving.",
+              "Let service feel energetic but still attentive to table cues.",
+            ]
+          : [
+              "Use a balanced, easygoing tone; check in at natural pauses.",
+              "Tailor dish ideas to their stated craving and dietary preference.",
+              "Keep pacing steady and read whether they want space or more engagement.",
+            ],
+    serviceApproach:
+      sentiment === "negative"
+        ? "Prioritize a calm, patient presence; comfort-forward food and drink suggestions that match cravings; minimal friction."
+        : sentiment === "positive"
+          ? "Lean into a warm, engaging style; use occasion and high energy to elevate the experience with enthusiastic but respectful hosting."
+          : "Stay adaptable: neutral valence with varied energy; mirror their rhythm and use cravings plus dietary notes to guide recommendations.",
   };
 }
 
-const PROMPT = (input: QuestionnaireInput) => `Analyze this restaurant customer's questionnaire:
-- Feeling: ${input.feeling}
-- Mood: ${input.mood}
-- Cravings: ${input.cravings}
-- Energy: ${input.energy}
+const PROMPT = (input: QuestionnaireInput) => `Analyze this restaurant customer's questionnaire (infer hospitality cues from their answers; do not assume they were asked about service style):
+- How they feel right now: ${input.emotionalState}
+- How their day has been: ${input.dayContext}
+- Energy level: ${input.energy}
 - Occasion: ${input.occasion}
+- What sounds good to eat: ${input.cravings}
 - Dietary preference: ${input.dietaryPreference}
 
 Return ONLY strict JSON (no markdown, no code fences) with these exact keys:

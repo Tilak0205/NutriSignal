@@ -45,11 +45,11 @@ router.post("/questionnaire", async (req, res) => {
   const parsed = z
     .object({
       sessionId: z.string(),
-      feeling: z.string(),
-      mood: z.string(),
-      cravings: z.string(),
+      emotionalState: z.string(),
+      dayContext: z.string(),
       energy: z.string(),
       occasion: z.string(),
+      cravings: z.string(),
       dietaryPreference: z.string(),
     })
     .safeParse(req.body);

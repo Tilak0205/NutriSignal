@@ -159,13 +159,13 @@ QR Scan → Welcome → Questionnaire (6 steps) → Menu → Order → Feedback 
 #### Step 2: Mood Questionnaire (6 questions)
 Each question is a full-screen step with animated emoji chips:
 
-| # | Question            | Options                                         |
-|---|--------------------|-------------------------------------------------|
-| 1 | How are you feeling? | Great 😊, Good 😌, Okay 😐, Tired 😫, Stressed 😰 |
-| 2 | What's your mood?  | Happy 😄, Relaxed 🧘, Excited 🤩, Sad 😢, Anxious 😰, Neutral 😐 |
-| 3 | Any cravings?      | Sweet 🍰, Savory 🥩, Spicy 🌶️, Light 🥗, Heavy 🍖, Comfort 🍲 |
-| 4 | Energy level?      | Low 🔋, Medium ⚡, High 🔥                     |
-| 5 | What's the occasion? | Casual ☕, Celebration 🎉, Date 💕, Business 💼, Family 👨‍👩‍👧‍👦 |
+| # | Question | Options |
+|---|----------|---------|
+| 1 | What best describes you right now? | Cheerful 😊, Calm 😌, Restless 😤, Drained 😮‍💨, Indifferent 😶 |
+| 2 | How has your day been? | Amazing ☀️, Normal 🌤️, Long day 🌙, Rough 🌧️, Special 🌟 |
+| 3 | How charged are you? | Low 🔋, Medium ⚡, High 🔥 |
+| 4 | What's the occasion? | Casual ☕, Celebration 🎉, Date 💕, Business 💼, Family 👨‍👩‍👧‍👦 |
+| 5 | What sounds good right now? | Sweet 🍰, Savory 🥩, Spicy 🌶️, Light 🥗, Heavy 🍖, Comfort 🍲 |
 | 6 | Dietary preference? | None 🍽️, Vegetarian 🥬, Vegan 🌱, Gluten-free 🌾 |
 
 - Progress bar shows completion across all 6 steps

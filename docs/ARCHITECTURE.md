@@ -220,7 +220,7 @@ The rule-based fallback activates when:
 - The response JSON cannot be parsed
 - Any exception occurs during the API call
 
-The fallback uses keyword matching on feeling/mood/energy fields to determine sentiment and generates templated interaction tips.
+The fallback uses emotional state, day context, and energy (with occasion and cravings for context) to determine sentiment and generates templated interaction tips.
 
 ## Frontend Routing
 
