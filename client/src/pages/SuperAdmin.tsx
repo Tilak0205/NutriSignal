@@ -122,7 +122,7 @@ export default function SuperAdmin() {
           <h3 className="font-semibold text-slate-800">Subscription Plans</h3>
           <div className="flex gap-2 mt-3 flex-wrap">
             <input value={newSub.name} onChange={(e) => { setNewSub((s) => ({ ...s, name: e.target.value })); setSubError(""); }} placeholder="Plan name" className="flex-1 min-w-[140px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-            <input type="number" value={newSub.price || ""} onChange={(e) => setNewSub((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="$ Price" className="w-24 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+            <input type="number" value={newSub.price || ""} onChange={(e) => setNewSub((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="£ Price" className="w-24 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
             <input type="number" value={newSub.maxTables} onChange={(e) => setNewSub((s) => ({ ...s, maxTables: Number(e.target.value) }))} placeholder="Max tables" className="w-24 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
             <button onClick={addSub} className="flex items-center gap-1.5 bg-sky-500 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-sky-600"><Plus className="w-4 h-4" />Add</button>
           </div>
@@ -146,7 +146,7 @@ export default function SuperAdmin() {
               ) : (
                 <>
                   <div className="font-semibold text-slate-800">{s.name}</div>
-                  <div className="text-2xl font-bold text-sky-600 my-1">${s.price}<span className="text-xs text-slate-400 font-normal">/mo</span></div>
+                  <div className="text-2xl font-bold text-sky-600 my-1">£{s.price}<span className="text-xs text-slate-400 font-normal">/mo</span></div>
                   <div className="text-xs text-slate-400 mb-3">Up to {s.maxTables} tables</div>
                   <button onClick={() => { setEditSubId(s.id); setEditSub({ name: s.name, price: s.price, maxTables: s.maxTables }); }} className="w-full text-xs font-medium text-slate-500 bg-slate-50 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">Edit Plan</button>
                 </>

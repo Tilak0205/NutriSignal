@@ -546,7 +546,7 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                   <input value={newItem.name} onChange={(e) => setNewItem((s) => ({ ...s, name: e.target.value }))} placeholder="Item name *"
                     className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" />
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">£</span>
                     <input type="number" min={0} step={0.01} value={newItem.price || ""} onChange={(e) => setNewItem((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="0.00"
                       className="w-full border border-slate-200 rounded-xl pl-6 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" />
                   </div>
@@ -681,7 +681,7 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                             <div className="p-2.5">
                               <div className="flex items-start justify-between gap-1">
                                 <p className={`text-xs font-bold leading-tight line-clamp-2 ${item.isAvailable ? "text-slate-800" : "text-slate-400"}`}>{item.name}</p>
-                                <span className="text-xs font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>${item.price.toFixed(2)}</span>
+                                <span className="text-xs font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>£{item.price.toFixed(2)}</span>
                               </div>
                               {item.description && <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>}
 
@@ -770,7 +770,7 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <h3 className="text-lg font-bold text-slate-800">{viewModal.name}</h3>
-                  <span className="text-lg font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>${viewModal.price.toFixed(2)}</span>
+                  <span className="text-lg font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>£{viewModal.price.toFixed(2)}</span>
                 </div>
                 {viewModal.description && <p className="text-sm text-slate-500 mb-3">{viewModal.description}</p>}
                 <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -836,7 +836,7 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Price *</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">£</span>
                       <input type="number" min={0} step={0.01} value={editForm.price || ""}
                         onChange={(e) => setEditForm(s => ({ ...s, price: Number(e.target.value) }))}
                         className="w-full border border-slate-200 rounded-xl pl-6 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" />
@@ -1176,13 +1176,13 @@ function OrdersTab({ orders, load, flash, accent }: { orders: OrderData[]; load:
               <span className="font-semibold text-sm">Table {o.table.tableNumber}</span>
               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColors[o.status] ?? "bg-slate-100"}`}>{o.status}</span>
             </div>
-            <span className="font-bold text-sm" style={{ color: accent }}>${o.totalAmount.toFixed(2)}</span>
+            <span className="font-bold text-sm" style={{ color: accent }}>£{o.totalAmount.toFixed(2)}</span>
           </div>
           <div className="px-4 py-2.5 space-y-1.5">
             {o.items.map((it, idx) => (
               <div key={idx} className="flex justify-between text-sm">
                 <span className="text-slate-700">{it.menuItem.name} <span className="text-slate-400">×{it.quantity}</span></span>
-                <span className="text-slate-400">${(it.menuItem.price * it.quantity).toFixed(2)}</span>
+                <span className="text-slate-400">£{(it.menuItem.price * it.quantity).toFixed(2)}</span>
               </div>
             ))}
             {o.notes && <div className="text-xs text-slate-400 italic pt-1">Note: {o.notes}</div>}

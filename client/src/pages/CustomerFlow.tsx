@@ -317,7 +317,7 @@ export default function CustomerFlow() {
                             <div className="flex-1 min-w-0">
                               <div className="font-semibold text-slate-800 text-sm">{item.name}</div>
                               {item.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{item.description}</div>}
-                              <div className="font-bold text-sm mt-1" style={{ color: accent }}>${item.price.toFixed(2)}</div>
+                              <div className="font-bold text-sm mt-1" style={{ color: accent }}>£{item.price.toFixed(2)}</div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               {qty > 0 && (
@@ -363,7 +363,7 @@ export default function CustomerFlow() {
                         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
                         {submitting ? "Placing order..." : `Place Order (${cartCount})`}
                       </span>
-                      <span className="font-bold">${total.toFixed(2)}</span>
+                      <span className="font-bold">£{total.toFixed(2)}</span>
                     </button>
                   </motion.div>
                 )}
