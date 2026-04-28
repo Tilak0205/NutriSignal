@@ -43,7 +43,7 @@ const NAV_ITEMS: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
 
 function MoodBar({ data, height = 100 }: { data: { sentiment: string; _count: number }[]; height?: number }) {
   const max = Math.max(...data.map(d => d._count), 1);
-  const colors: Record<string, string> = { positive: "#16a34a", neutral: "#22c55e", negative: "#15803d" };
+  const colors: Record<string, string> = { positive: "#22c55e", neutral: "#f59e0b", negative: "#ef4444" };
   const labels: Record<string, string> = { positive: "Good Vibes", neutral: "Mellow", negative: "Needs Care" };
   return (
     <div className="flex items-end gap-4 justify-center" style={{ height }}>
@@ -578,7 +578,10 @@ export default function SuperAdmin() {
                                 <h4 className="font-bold text-slate-800">{s.name}</h4>
                                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{planCount} restaurant{planCount !== 1 ? "s" : ""}</span>
                               </div>
-                              <div className="text-3xl font-extrabold text-emerald-700 my-2">£{s.price}<span className="text-sm text-slate-400 font-normal">/mo</span></div>
+                              <div className="text-4xl font-extrabold text-emerald-700 my-2 leading-none tabular-nums">
+                                £{s.price}
+                                <span className="text-sm text-slate-400 font-medium ml-0.5">/mo</span>
+                              </div>
                               <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-4">
                                 <Table2 className="w-4 h-4 text-slate-400" />
                                 <span>{s.maxTables} tables</span>
