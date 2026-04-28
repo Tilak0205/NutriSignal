@@ -92,17 +92,19 @@ export default function RestaurantDash() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [feedbacks, setFeedbacks] = useState<FeedbackData[]>([]);
+  const [qStats, setQStats] = useState<{ totalResponses: number; questionStats: Record<string, Record<string, number>> } | null>(null);
   const [toast, setToast] = useState("");
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
   const load = async () => {
-    const [p, c, t, m, o, f] = await Promise.all([
+    const [p, c, t, m, o, f, q] = await Promise.all([
       api.get("/restaurant/profile"), api.get("/restaurant/menu/categories"), api.get("/restaurant/tables"),
       api.get("/restaurant/mood-insights"), api.get("/restaurant/orders"), api.get("/restaurant/feedbacks"),
+      api.get("/restaurant/questionnaire-stats"),
     ]);
     setProfile({ name: p.data?.name ?? "", brandPrimaryColor: p.data?.brandPrimaryColor ?? "#0ea5e9", brandSecondaryColor: p.data?.brandSecondaryColor ?? "#22c55e", description: p.data?.description ?? "", address: p.data?.address ?? "", phone: p.data?.phone ?? "" });
-    setCategories(c.data); setTables(t.data); setInsights(m.data); setOrders(o.data); setFeedbacks(f.data);
+    setCategories(c.data); setTables(t.data); setInsights(m.data); setOrders(o.data); setFeedbacks(f.data); setQStats(q.data);
     setLoading(false);
   };
 
@@ -177,7 +179,7 @@ export default function RestaurantDash() {
               {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setProfile={setProfile} load={load} flash={flash} setTab={setTab} goToInsight={goToInsight} />}
               {tab === "menu" && <MenuTab categories={categories} load={load} flash={flash} accent={accent} />}
               {tab === "tables" && <TablesTab tables={tables} load={load} flash={flash} />}
-              {tab === "insights" && <InsightsTab insights={insights} accent={accent} highlightInsightId={highlightInsightId} />}
+              {tab === "insights" && <InsightsTab insights={insights} accent={accent} highlightInsightId={highlightInsightId} qStats={qStats} />}
               {tab === "orders" && <OrdersTab orders={orders} load={load} flash={flash} accent={accent} />}
               {tab === "feedback" && <FeedbackTab feedbacks={feedbacks} avgRating={avgRating} />}
             </motion.div>
@@ -1030,8 +1032,17 @@ function TablesTab({ tables, load, flash }: { tables: Table[]; load: () => void;
   );
 }
 
+const QUESTION_ORDER: { key: string; label: string }[] = [
+  { key: "emotionalState", label: "What best describes you right now?" },
+  { key: "dayContext", label: "How has your day been?" },
+  { key: "energy", label: "How charged are you?" },
+  { key: "occasion", label: "What's the occasion?" },
+  { key: "cravings", label: "What sounds good right now?" },
+  { key: "dietaryPreference", label: "Dietary preference?" },
+];
+
 /* ---------- Insights ---------- */
-function InsightsTab({ insights, highlightInsightId }: { insights: Insight[]; accent?: string; highlightInsightId: string }) {
+function InsightsTab({ insights, highlightInsightId, accent, qStats }: { insights: Insight[]; accent?: string; highlightInsightId: string; qStats: { totalResponses: number; questionStats: Record<string, Record<string, number>> } | null }) {
   const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [sentimentFilter, setSentimentFilter] = useState("all");
@@ -1107,6 +1118,58 @@ function InsightsTab({ insights, highlightInsightId }: { insights: Insight[]; ac
           </button>
         )}
       </div>
+
+      {/* Questionnaire Stats */}
+      {qStats && qStats.totalResponses > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="w-4 h-4" style={{ color: accent }} />
+              <h3 className="font-semibold text-sm text-slate-700">Questionnaire Responses</h3>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium">{qStats.totalResponses} total</span>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {QUESTION_ORDER.map(({ key, label }, idx) => {
+              const answers = qStats.questionStats[key];
+              if (!answers) return null;
+              const total = Object.values(answers).reduce((s, v) => s + v, 0);
+              const sorted = Object.entries(answers).sort((a, b) => b[1] - a[1]);
+              const topAnswer = sorted[0];
+              return (
+                <details key={key} className="group">
+                  <summary className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors list-none">
+                    <span className="text-xs font-medium text-slate-700">
+                      <span className="text-[10px] text-slate-400 mr-1.5">Q{idx + 1}.</span>{label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {topAnswer && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md capitalize" style={{ background: `${accent}15`, color: accent }}>{topAnswer[0].replace(/-/g, " ")}</span>}
+                      <span className="text-[10px] text-slate-400">{total}</span>
+                      <ChevronDown className="w-3 h-3 text-slate-300 transition-transform group-open:rotate-180" />
+                    </div>
+                  </summary>
+                  <div className="px-4 pb-3 space-y-1">
+                    {sorted.map(([answer, count]) => {
+                      const pct = total ? (count / total) * 100 : 0;
+                      return (
+                        <div key={answer} className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 w-24 truncate text-right capitalize">{answer.replace(/-/g, " ")}</span>
+                          <div className="flex-1 h-3.5 bg-slate-100 rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.4 }}
+                              className="h-full rounded-full" style={{ background: accent }} />
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-600 w-7 text-right">{count}</span>
+                          <span className="text-[9px] text-slate-400 w-9 text-right">{pct.toFixed(0)}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {filteredInsights.length === 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 shadow-sm">

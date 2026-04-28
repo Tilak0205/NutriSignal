@@ -174,6 +174,22 @@ router.get("/mood-insights", async (req, res) => {
   res.json(data);
 });
 
+router.get("/questionnaire-stats", async (req, res) => {
+  const responses = await prisma.questionnaireResponse.findMany({
+    where: { session: { restaurantId: req.user?.restaurantId ?? "" } },
+    select: { responses: true },
+  });
+  const stats: Record<string, Record<string, number>> = {};
+  for (const r of responses) {
+    const data = r.responses as Record<string, string>;
+    for (const [key, value] of Object.entries(data)) {
+      if (!stats[key]) stats[key] = {};
+      stats[key][value] = (stats[key][value] ?? 0) + 1;
+    }
+  }
+  res.json({ totalResponses: responses.length, questionStats: stats });
+});
+
 router.get("/mood-insights/history", async (req, res) => {
   const from = req.query.from ? new Date(String(req.query.from)) : new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
   const to = req.query.to ? new Date(String(req.query.to)) : new Date();
