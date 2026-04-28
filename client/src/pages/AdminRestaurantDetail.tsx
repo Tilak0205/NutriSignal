@@ -29,9 +29,9 @@ const QUESTION_ORDER: { key: string; label: string }[] = [
   { key: "dietaryPreference", label: "Dietary preference?" },
 ];
 
-const moodColors: Record<string, string> = { positive: "#22c55e", neutral: "#f59e0b", negative: "#ef4444" };
+const moodColors: Record<string, string> = { positive: "#16a34a", neutral: "#22c55e", negative: "#15803d" };
 const moodLabels: Record<string, string> = { positive: "Good Vibes", neutral: "Mellow", negative: "Needs Care" };
-const statusColors: Record<string, string> = { PENDING: "bg-amber-100 text-amber-700", PREPARING: "bg-blue-100 text-blue-700", SERVED: "bg-emerald-100 text-emerald-700", COMPLETED: "bg-slate-100 text-slate-600" };
+const statusColors: Record<string, string> = { PENDING: "bg-emerald-100 text-emerald-700", PREPARING: "bg-emerald-100 text-emerald-700", SERVED: "bg-emerald-100 text-emerald-700", COMPLETED: "bg-slate-100 text-slate-600" };
 
 function HBar({ data, accent }: { data: Record<string, number>; accent: string }) {
   const total = Object.values(data).reduce((s, v) => s + v, 0) || 1;
@@ -115,12 +115,12 @@ export default function AdminRestaurantDetail() {
     } finally { setSaving(false); }
   };
 
-  const accent = restaurant?.brandPrimaryColor ?? "#0ea5e9";
+  const accent = "#16a34a";
 
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12 flex items-center justify-center gap-3">
-        <Loader2 className="w-5 h-5 animate-spin text-sky-500" />
+        <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
         <span className="text-sm text-slate-400">Loading restaurant details...</span>
       </div>
     );
@@ -129,12 +129,12 @@ export default function AdminRestaurantDetail() {
   if (!restaurant) return <div className="max-w-5xl mx-auto px-4 py-12 text-center text-slate-400">Restaurant not found</div>;
 
   const statCards = [
-    { label: "Orders", value: stats?.orders ?? 0, icon: ShoppingBag, color: "from-sky-500 to-blue-600" },
-    { label: "Tables", value: stats?.tables ?? 0, icon: Table2, color: "from-amber-500 to-orange-600" },
-    { label: "Menu Items", value: stats?.menuItems ?? 0, icon: UtensilsCrossed, color: "from-pink-500 to-rose-600" },
-    { label: "Sessions", value: stats?.sessions ?? 0, icon: Users, color: "from-purple-500 to-violet-600" },
-    { label: "Feedbacks", value: stats?.feedbacks ?? 0, icon: MessageSquare, color: "from-teal-500 to-cyan-600" },
-    { label: "Avg Rating", value: stats?.avgRating ? stats.avgRating.toFixed(1) : "—", icon: Star, color: "from-yellow-500 to-amber-600" },
+    { label: "Orders", value: stats?.orders ?? 0, icon: ShoppingBag, color: "from-emerald-500 to-green-600" },
+    { label: "Tables", value: stats?.tables ?? 0, icon: Table2, color: "from-green-500 to-emerald-600" },
+    { label: "Menu Items", value: stats?.menuItems ?? 0, icon: UtensilsCrossed, color: "from-emerald-400 to-green-500" },
+    { label: "Sessions", value: stats?.sessions ?? 0, icon: Users, color: "from-green-400 to-emerald-500" },
+    { label: "Feedbacks", value: stats?.feedbacks ?? 0, icon: MessageSquare, color: "from-emerald-500 to-green-600" },
+    { label: "Avg Rating", value: stats?.avgRating ? stats.avgRating.toFixed(1) : "—", icon: Star, color: "from-green-500 to-emerald-600" },
   ];
 
   return (
@@ -155,14 +155,14 @@ export default function AdminRestaurantDetail() {
                 {restaurant.isActive ? "Active" : "Inactive"}
               </span>
               {restaurant.users?.[0] && <span>· {restaurant.users[0].email}</span>}
-              {restaurant.subscriptionPlan && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-600">{restaurant.subscriptionPlan.name}</span>}
+              {restaurant.subscriptionPlan && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{restaurant.subscriptionPlan.name}</span>}
               {restaurant.phone && <span>· {restaurant.phone}</span>}
               {restaurant.address && <span>· {restaurant.address}</span>}
             </div>
           </div>
           <button onClick={() => { const next = !editing; setEditing(next); if (!next) { searchParams.delete("edit"); setSearchParams(searchParams, { replace: true }); } }}
             className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl transition-colors shrink-0"
-            style={editing ? { background: "#1e293b", color: "white" } : { background: "#f1f5f9", color: "#475569" }}>
+            style={editing ? { background: "#166534", color: "white" } : { background: "#f1f5f9", color: "#475569" }}>
             <Pencil className="w-3 h-3" /> {editing ? "Cancel" : "Edit Details"}
           </button>
         </div>
@@ -178,22 +178,22 @@ export default function AdminRestaurantDetail() {
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Name *</label>
                   <input value={editForm.name} onChange={(e) => setEditForm(s => ({ ...s, name: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Phone</label>
                   <input value={editForm.phone} onChange={(e) => setEditForm(s => ({ ...s, phone: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Address</label>
                   <input value={editForm.address} onChange={(e) => setEditForm(s => ({ ...s, address: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Subscription Plan</label>
                   <select value={editForm.subscriptionPlanId} onChange={(e) => setEditForm(s => ({ ...s, subscriptionPlanId: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white">
                     <option value="">No plan</option>
                     {allPlans.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price}/mo ({p.maxTables} tables)</option>)}
                   </select>
@@ -202,7 +202,7 @@ export default function AdminRestaurantDetail() {
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Description</label>
                 <textarea value={editForm.description} onChange={(e) => setEditForm(s => ({ ...s, description: e.target.value }))} rows={2}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 resize-none" />
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 resize-none" />
               </div>
               <button onClick={saveEdit} disabled={saving || !editForm.name.trim()}
                 className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all disabled:opacity-40"
@@ -265,7 +265,7 @@ export default function AdminRestaurantDetail() {
                     <span className="text-xs text-slate-500 w-4 text-right">{r}★</span>
                     <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
                       <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.5 }} className="h-full rounded-full bg-amber-400" />
+                        transition={{ duration: 0.5 }} className="h-full rounded-full bg-emerald-500" />
                     </div>
                     <span className="text-[10px] font-medium text-slate-500 w-6">{count}</span>
                   </div>

@@ -43,7 +43,7 @@ const NAV_ITEMS: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
 
 function MoodBar({ data, height = 100 }: { data: { sentiment: string; _count: number }[]; height?: number }) {
   const max = Math.max(...data.map(d => d._count), 1);
-  const colors: Record<string, string> = { positive: "#22c55e", neutral: "#f59e0b", negative: "#ef4444" };
+  const colors: Record<string, string> = { positive: "#16a34a", neutral: "#22c55e", negative: "#15803d" };
   const labels: Record<string, string> = { positive: "Good Vibes", neutral: "Mellow", negative: "Needs Care" };
   return (
     <div className="flex items-end gap-4 justify-center" style={{ height }}>
@@ -169,7 +169,7 @@ export default function SuperAdmin() {
     { label: "Active Sessions", value: analytics?.activeSessions ?? "—", icon: Users, gradient: "from-lime-500 to-green-600" },
     { label: "Tables", value: analytics?.totalTables ?? "—", icon: Table2, gradient: "from-emerald-400 to-green-500" },
     { label: "Menu Items", value: analytics?.totalMenuItems ?? "—", icon: UtensilsCrossed, gradient: "from-green-400 to-emerald-500" },
-    { label: "Feedbacks", value: analytics?.totalFeedbacks ?? "—", icon: MessageSquare, gradient: "from-teal-500 to-emerald-600" },
+    { label: "Feedbacks", value: analytics?.totalFeedbacks ?? "—", icon: MessageSquare, gradient: "from-green-500 to-emerald-600" },
   ];
 
   if (loading) {
