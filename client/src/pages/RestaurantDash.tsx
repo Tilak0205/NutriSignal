@@ -1041,8 +1041,10 @@ const QUESTION_ORDER: { key: string; label: string }[] = [
   { key: "dietaryPreference", label: "Dietary preference?" },
 ];
 
+const SOOTHING_Q_COLORS = ["#7c93c3", "#8bb8a8", "#c4a882", "#a88bc4", "#82b8c4", "#c49b8b"];
+
 /* ---------- Insights ---------- */
-function InsightsTab({ insights, highlightInsightId, accent, qStats }: { insights: Insight[]; accent?: string; highlightInsightId: string; qStats: { totalResponses: number; questionStats: Record<string, Record<string, number>> } | null }) {
+function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insight[]; accent?: string; highlightInsightId: string; qStats: { totalResponses: number; questionStats: Record<string, Record<string, number>> } | null }) {
   const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [sentimentFilter, setSentimentFilter] = useState("all");
@@ -1057,10 +1059,10 @@ function InsightsTab({ insights, highlightInsightId, accent, qStats }: { insight
   };
   const toggleGroup = (dateStr: string) => setGroupOverrides(prev => ({ ...prev, [dateStr]: !isGroupExpanded(dateStr) }));
 
-  const sentimentConfig: Record<string, { icon: typeof CheckCircle2; badgeClass: string; glowColor: string; bgClass: string; iconColor: string }> = {
-    positive: { icon: CheckCircle2, badgeClass: "bg-emerald-100 text-emerald-700", glowColor: "#10b981", bgClass: "bg-emerald-50/20", iconColor: "#10b981" },
-    negative: { icon: AlertCircle, badgeClass: "bg-red-100 text-red-700", glowColor: "#ef4444", bgClass: "bg-red-50/20", iconColor: "#ef4444" },
-    neutral: { icon: Clock, badgeClass: "bg-amber-100 text-amber-700", glowColor: "#f59e0b", bgClass: "bg-amber-50/20", iconColor: "#f59e0b" },
+  const sentimentConfig: Record<string, { icon: typeof CheckCircle2; badgeClass: string; color: string; bgClass: string; borderColor: string }> = {
+    positive: { icon: CheckCircle2, badgeClass: "bg-teal-50 text-teal-700 border border-teal-200", color: "#5eaba4", bgClass: "bg-teal-50/30", borderColor: "#99d5cf" },
+    negative: { icon: AlertCircle, badgeClass: "bg-rose-50 text-rose-600 border border-rose-200", color: "#d4838a", bgClass: "bg-rose-50/20", borderColor: "#e8b4b8" },
+    neutral: { icon: Clock, badgeClass: "bg-amber-50 text-amber-700 border border-amber-200", color: "#c9a96e", bgClass: "bg-amber-50/20", borderColor: "#ddc99b" },
   };
 
   const filteredInsights = useMemo(() => insights.filter(i => {
@@ -1087,31 +1089,53 @@ function InsightsTab({ insights, highlightInsightId, accent, qStats }: { insight
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightInsightId]);
 
-  if (!insights.length) {
+  if (!insights.length && (!qStats || qStats.totalResponses === 0)) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 shadow-sm">
-        <Brain className="w-10 h-10 mx-auto mb-2 opacity-40" />
-        <p>No insights yet. They appear after customers complete the questionnaire.</p>
+      <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-400">
+        <Brain className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="font-medium">No insights yet</p>
+        <p className="text-xs mt-1">They appear after customers complete the questionnaire.</p>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-5">
-      <SectionHeader title="Mood Insights" sub={`AI-powered customer analysis — ${insights.length} total`} />
+  const moodCounts = { positive: 0, neutral: 0, negative: 0 };
+  for (const i of insights) { if (i.sentiment in moodCounts) moodCounts[i.sentiment as keyof typeof moodCounts]++; }
 
-      {/* Filter bar */}
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Insights" sub={`${insights.length} table insights · ${qStats?.totalResponses ?? 0} questionnaire responses`} />
+
+      {/* ── Mood summary mini-cards ── */}
+      {insights.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {(["positive", "neutral", "negative"] as const).map(s => {
+            const conf = sentimentConfig[s];
+            const count = moodCounts[s];
+            const pct = insights.length ? Math.round((count / insights.length) * 100) : 0;
+            return (
+              <div key={s} className="rounded-2xl p-3.5 text-center border" style={{ background: `${conf.color}08`, borderColor: conf.borderColor }}>
+                <div className="text-2xl font-bold" style={{ color: conf.color }}>{count}</div>
+                <div className="text-[10px] font-semibold text-slate-500 mt-0.5">{SENTIMENT_LABEL[s]}</div>
+                <div className="text-[9px] text-slate-400">{pct}%</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Filter bar ── */}
       <div className="flex flex-wrap gap-2 items-center">
-        <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 gap-0.5 shadow-sm">
+        <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 gap-0.5">
           {SENTIMENT_FILTER_OPTIONS.map(f => (
             <button key={f.value} onClick={() => setSentimentFilter(f.value)}
-              className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${sentimentFilter === f.value ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}>
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${sentimentFilter === f.value ? "bg-slate-700 text-white" : "text-slate-500 hover:bg-slate-100"}`}>
               {f.label}
             </button>
           ))}
         </div>
         <input value={tableFilter} onChange={e => setTableFilter(e.target.value)} placeholder="Table #"
-          className="w-20 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white shadow-sm" />
+          className="w-20 border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white" />
         {(sentimentFilter !== "all" || tableFilter) && (
           <button onClick={() => { setSentimentFilter("all"); setTableFilter(""); }} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
             <X className="w-3 h-3" /> Clear
@@ -1119,68 +1143,16 @@ function InsightsTab({ insights, highlightInsightId, accent, qStats }: { insight
         )}
       </div>
 
-      {/* Questionnaire Stats */}
-      {qStats && qStats.totalResponses > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4" style={{ color: accent }} />
-              <h3 className="font-semibold text-sm text-slate-700">Questionnaire Responses</h3>
-            </div>
-            <span className="text-[10px] text-slate-400 font-medium">{qStats.totalResponses} total</span>
-          </div>
-          <div className="divide-y divide-slate-50">
-            {QUESTION_ORDER.map(({ key, label }, idx) => {
-              const answers = qStats.questionStats[key];
-              if (!answers) return null;
-              const total = Object.values(answers).reduce((s, v) => s + v, 0);
-              const sorted = Object.entries(answers).sort((a, b) => b[1] - a[1]);
-              const topAnswer = sorted[0];
-              return (
-                <details key={key} className="group">
-                  <summary className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors list-none">
-                    <span className="text-xs font-medium text-slate-700">
-                      <span className="text-[10px] text-slate-400 mr-1.5">Q{idx + 1}.</span>{label}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {topAnswer && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md capitalize" style={{ background: `${accent}15`, color: accent }}>{topAnswer[0].replace(/-/g, " ")}</span>}
-                      <span className="text-[10px] text-slate-400">{total}</span>
-                      <ChevronDown className="w-3 h-3 text-slate-300 transition-transform group-open:rotate-180" />
-                    </div>
-                  </summary>
-                  <div className="px-4 pb-3 space-y-1">
-                    {sorted.map(([answer, count]) => {
-                      const pct = total ? (count / total) * 100 : 0;
-                      return (
-                        <div key={answer} className="flex items-center gap-2">
-                          <span className="text-[10px] text-slate-500 w-24 truncate text-right capitalize">{answer.replace(/-/g, " ")}</span>
-                          <div className="flex-1 h-3.5 bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.4 }}
-                              className="h-full rounded-full" style={{ background: accent }} />
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-600 w-7 text-right">{count}</span>
-                          <span className="text-[9px] text-slate-400 w-9 text-right">{pct.toFixed(0)}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
+      {/* ═══ SECTION 1: Table Insights (Priority) ═══ */}
       {filteredInsights.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
           <p>No insights match your filter.</p>
         </div>
       )}
 
-      {/* Date groups */}
       {groups.map(group => (
         <div key={group.dateStr}>
-          <button onClick={() => toggleGroup(group.dateStr)} className="w-full flex items-center justify-between px-1 mb-2 group">
+          <button onClick={() => toggleGroup(group.dateStr)} className="w-full flex items-center justify-between px-1 mb-2.5 group">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-700">{group.label}</span>
               <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
@@ -1194,70 +1166,117 @@ function InsightsTab({ insights, highlightInsightId, accent, qStats }: { insight
 
           <AnimatePresence>
             {isGroupExpanded(group.dateStr) && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden space-y-2">
-                {group.items.map(insight => {
-                  const conf = sentimentConfig[insight.sentiment] ?? sentimentConfig.neutral;
-                  const SentimentIcon = conf.icon;
-                  const isExpanded = !!expandedCards[insight.id];
-                  const isHighlighted = insight.id === highlightInsightId;
-                  const tips = (insight.interactionTips as string[]).slice(0, 3);
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pb-2">
+                  {group.items.map(insight => {
+                    const conf = sentimentConfig[insight.sentiment] ?? sentimentConfig.neutral;
+                    const SentimentIcon = conf.icon;
+                    const isExpanded = !!expandedCards[insight.id];
+                    const isHighlighted = insight.id === highlightInsightId;
+                    const tips = (insight.interactionTips as string[]).slice(0, 3);
 
-                  return (
-                    <motion.div key={insight.id} layout data-insight-id={insight.id}
-                      className={`rounded-xl border border-slate-200 overflow-hidden ${conf.bgClass} ${isHighlighted ? "ring-2 ring-sky-400 shadow-lg shadow-sky-100" : "shadow-sm"}`}
-                      style={{ boxShadow: isHighlighted ? undefined : `inset 3px 0 0 ${conf.glowColor}, 0 1px 3px 0 rgba(0,0,0,0.05)` }}
-                    >
-                      <button onClick={() => setExpandedCards(prev => ({ ...prev, [insight.id]: !isExpanded }))} className="w-full text-left p-3.5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <SentimentIcon className="w-4 h-4 shrink-0" style={{ color: conf.iconColor }} />
-                            <span className="font-semibold text-sm text-slate-800 shrink-0">Table {insight.table.tableNumber}</span>
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${conf.badgeClass}`}>
-                              {SENTIMENT_LABEL[insight.sentiment] ?? insight.sentiment}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="text-right">
-                              <div className="text-xs font-bold text-slate-600 tabular-nums">{relativeTime(insight.createdAt)}</div>
-                              <div className="text-[10px] text-slate-400">
-                                {new Date(insight.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                              </div>
+                    return (
+                      <motion.div key={insight.id} layout data-insight-id={insight.id}
+                        className={`rounded-2xl border overflow-hidden ${isHighlighted ? "ring-2 ring-sky-300 shadow-lg" : ""}`}
+                        style={{ background: `${conf.color}06`, borderColor: conf.borderColor, boxShadow: isHighlighted ? undefined : `inset 3px 0 0 ${conf.color}` }}
+                      >
+                        <button onClick={() => setExpandedCards(prev => ({ ...prev, [insight.id]: !isExpanded }))} className="w-full text-left p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <SentimentIcon className="w-4 h-4 shrink-0" style={{ color: conf.color }} />
+                              <span className="font-semibold text-sm text-slate-800 shrink-0">Table {insight.table.tableNumber}</span>
+                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${conf.badgeClass}`}>
+                                {SENTIMENT_LABEL[insight.sentiment] ?? insight.sentiment}
+                              </span>
                             </div>
-                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] font-medium text-slate-500 tabular-nums">{relativeTime(insight.createdAt)}</span>
+                              {isExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
+                            </div>
                           </div>
-                        </div>
-                        {!isExpanded && (
-                          <p className="text-xs text-slate-500 mt-2 truncate">{tips[0] ?? insight.serviceApproach}</p>
-                        )}
-                      </button>
+                          {!isExpanded && (
+                            <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">{tips[0] ?? insight.serviceApproach}</p>
+                          )}
+                        </button>
 
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.16 }} className="overflow-hidden px-3.5 pb-3.5">
-                            <div className="border-t border-slate-200/60 pt-2.5 space-y-1.5">
-                              {tips.map((tip, idx) => (
-                                <div key={idx} className="flex items-start gap-2.5">
-                                  <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white mt-0.5" style={{ background: conf.glowColor }}>{idx + 1}</span>
-                                  <span className="text-xs text-slate-700 leading-relaxed">{tip}</span>
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.16 }} className="overflow-hidden px-3.5 pb-3.5">
+                              <div className="border-t pt-2.5 space-y-1.5" style={{ borderColor: `${conf.color}25` }}>
+                                <div className="text-[9px] text-slate-400 mb-1">
+                                  {new Date(insight.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                                 </div>
-                              ))}
-                              {insight.serviceApproach && (
-                                <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100 mt-2">
-                                  💡 {insight.serviceApproach}
-                                </p>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
+                                {tips.map((tip, idx) => (
+                                  <div key={idx} className="flex items-start gap-2">
+                                    <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white mt-0.5" style={{ background: conf.color }}>{idx + 1}</span>
+                                    <span className="text-xs text-slate-700 leading-relaxed">{tip}</span>
+                                  </div>
+                                ))}
+                                {insight.serviceApproach && (
+                                  <p className="text-[10px] text-slate-400 italic pt-1.5 mt-1.5" style={{ borderTop: `1px solid ${conf.color}15` }}>
+                                    💡 {insight.serviceApproach}
+                                  </p>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       ))}
+
+      {/* ═══ SECTION 2: Overall Analysis (Questionnaire Stats) ═══ */}
+      {qStats && qStats.totalResponses > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 px-1">
+            <h3 className="text-sm font-bold text-slate-700 shrink-0">Overall Analysis</h3>
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-[10px] text-slate-400 font-medium shrink-0">{qStats.totalResponses} responses</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {QUESTION_ORDER.map(({ key, label }, idx) => {
+              const answers = qStats.questionStats[key];
+              if (!answers) return null;
+              const total = Object.values(answers).reduce((s, v) => s + v, 0);
+              const sorted = Object.entries(answers).sort((a, b) => b[1] - a[1]);
+              const barColor = SOOTHING_Q_COLORS[idx % SOOTHING_Q_COLORS.length];
+              return (
+                <div key={key} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: `${barColor}08` }}>
+                    <span className="text-xs font-semibold text-slate-700">
+                      <span className="text-[10px] font-bold mr-1.5" style={{ color: barColor }}>Q{idx + 1}</span>{label}
+                    </span>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: `${barColor}15`, color: barColor }}>{total}</span>
+                  </div>
+                  <div className="px-4 py-3 space-y-1.5">
+                    {sorted.map(([answer, count]) => {
+                      const pct = total ? (count / total) * 100 : 0;
+                      return (
+                        <div key={answer} className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 w-24 truncate text-right capitalize">{answer.replace(/-/g, " ")}</span>
+                          <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }}
+                              className="h-full rounded-full" style={{ background: barColor }} />
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-600 w-6 text-right">{count}</span>
+                          <span className="text-[9px] text-slate-400 w-8 text-right">{pct.toFixed(0)}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
