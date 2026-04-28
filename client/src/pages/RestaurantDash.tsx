@@ -5,6 +5,7 @@ import {
   MessageSquare, Plus, Trash2, Eye, Download, ChevronDown, ChevronUp,
   TrendingUp, ShoppingBag as BagIcon, Star, X, Upload, CheckCircle2,
   AlertCircle, Clock, ArrowRight, Image as ImageIcon, Loader2, Pencil, Save,
+  ChevronLeft, ChevronRight, Power,
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -402,9 +403,16 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
   const [savingItem, setSavingItem] = useState(false);
   const [savingCat, setSavingCat] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ name: string; price: number; description: string }>({ name: "", price: 0, description: "" });
+
+  const [editModal, setEditModal] = useState<Item | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; price: number; description: string; images: string[]; categoryId: string }>({ name: "", price: 0, description: "", images: [], categoryId: "" });
+  const [editDragOver, setEditDragOver] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const editFileRef = useRef<HTMLInputElement>(null);
+
+  const [viewModal, setViewModal] = useState<Item | null>(null);
+  const [viewSlide, setViewSlide] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableCategories = MENU_CATEGORIES.filter(cat => !categories.some(c => c.name === cat));
@@ -417,6 +425,19 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setNewItem(s => { if (s.images.length >= 5) return s; return { ...s, images: [...s.images, result] }; });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleEditFiles = (files: FileList | null) => {
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setEditForm(s => { if (s.images.length >= 5) return s; return { ...s, images: [...s.images, result] }; });
       };
       reader.readAsDataURL(file);
     });
@@ -455,19 +476,23 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
   };
   const toggleItem = async (id: string, current: boolean) => { await api.put(`/restaurant/menu/items/${id}`, { isAvailable: !current }); load(); };
 
-  const startEdit = (item: Item) => {
-    setEditingItem(item.id);
-    setEditForm({ name: item.name, price: item.price, description: item.description ?? "" });
+  const openEdit = (item: Item) => {
+    setEditModal(item);
+    setEditForm({ name: item.name, price: item.price, description: item.description ?? "", images: item.images ?? [], categoryId: item.categoryId });
   };
-  const cancelEdit = () => { setEditingItem(null); };
-  const saveEdit = async (id: string) => {
-    if (!editForm.name.trim() || editForm.price <= 0) return;
+  const saveEdit = async () => {
+    if (!editModal || !editForm.name.trim() || editForm.price <= 0) return;
     setSavingEdit(true);
     try {
-      await api.put(`/restaurant/menu/items/${id}`, { name: editForm.name.trim(), price: editForm.price, description: editForm.description });
-      load(); flash("Item updated"); setEditingItem(null);
+      await api.put(`/restaurant/menu/items/${editModal.id}`, {
+        name: editForm.name.trim(), price: editForm.price, description: editForm.description,
+        images: editForm.images, categoryId: editForm.categoryId,
+      });
+      load(); flash("Item updated"); setEditModal(null);
     } finally { setSavingEdit(false); }
   };
+
+  const openView = (item: Item) => { setViewModal(item); setViewSlide(0); };
 
   const toggleCollapse = (catId: string) => setCollapsed(p => ({ ...p, [catId]: !p[catId] }));
   const totalItems = categories.reduce((s, c) => s + c.items.length, 0);
@@ -602,11 +627,8 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
         const isOpen = !collapsed[cat.id];
         return (
           <div key={cat.id} id={`cat-${cat.id}`} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            {/* Category header — clickable to collapse */}
-            <button
-              onClick={() => toggleCollapse(cat.id)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50/80 transition-colors"
-            >
+            <button onClick={() => toggleCollapse(cat.id)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50/80 transition-colors">
               <div className="flex items-center gap-2.5">
                 <span className="text-lg">{emoji}</span>
                 <div className="text-left">
@@ -615,10 +637,8 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <span
-                  onClick={(e) => { e.stopPropagation(); delCat(cat.id, cat.name); }}
-                  className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors cursor-pointer"
-                >
+                <span onClick={(e) => { e.stopPropagation(); delCat(cat.id, cat.name); }}
+                  className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors cursor-pointer">
                   <Trash2 className="w-3 h-3" />
                 </span>
                 <div className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-100 transition-transform" style={{ transform: isOpen ? "rotate(0)" : "rotate(-90deg)" }}>
@@ -627,123 +647,70 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
               </div>
             </button>
 
-            {/* Collapsible items */}
             <AnimatePresence>
               {isOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                   <div className="border-t border-slate-100 px-3 py-3">
                     {cat.items.length === 0 ? (
                       <div className="py-4 text-center">
                         <p className="text-xs text-slate-400">No items in this category</p>
                         <button onClick={() => { setNewItem(s => ({ ...s, categoryId: cat.id })); setShowAddItem(true); }}
-                          className="mt-1.5 text-[10px] font-bold transition-colors" style={{ color: accent }}>
-                          + Add first item
-                        </button>
+                          className="mt-1.5 text-[10px] font-bold transition-colors" style={{ color: accent }}>+ Add first item</button>
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                        {cat.items.map((item, i) => {
-                          const isEditing = editingItem === item.id;
-                          return (
-                            <motion.div
-                              key={item.id}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: i * 0.03, duration: 0.15 }}
-                              className={`rounded-xl border overflow-hidden group transition-all ${isEditing ? "border-sky-300 shadow-md ring-1 ring-sky-200" : "border-slate-100 hover:shadow-md"} ${!item.isAvailable && !isEditing ? "opacity-50 grayscale" : ""}`}
-                            >
-                              {/* Image */}
-                              <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
-                                {item.images?.[0] ? (
-                                  <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <span className="text-2xl opacity-15">{emoji}</span>
-                                  </div>
-                                )}
-                                {item.images && item.images.length > 1 && (
-                                  <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md">
-                                    {item.images.length} pics
-                                  </div>
-                                )}
-                                {/* Status overlay */}
-                                <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold backdrop-blur-md ${item.isAvailable ? "bg-emerald-500/90 text-white" : "bg-black/40 text-white/80"}`}>
-                                  {item.isAvailable ? "Live" : "Off"}
-                                </div>
+                        {cat.items.map((item, i) => (
+                          <motion.div key={item.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.15 }}
+                            className={`rounded-xl border border-slate-100 overflow-hidden group hover:shadow-md transition-all ${!item.isAvailable ? "opacity-50 grayscale" : ""}`}>
+                            {/* Image */}
+                            <div className="relative aspect-[4/3] overflow-hidden bg-slate-50 cursor-pointer" onClick={() => openView(item)}>
+                              {item.images?.[0] ? (
+                                <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center"><span className="text-2xl opacity-15">{emoji}</span></div>
+                              )}
+                              {item.images && item.images.length > 1 && (
+                                <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md">{item.images.length} pics</div>
+                              )}
+                              <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold backdrop-blur-md ${item.isAvailable ? "bg-emerald-500/90 text-white" : "bg-black/40 text-white/80"}`}>
+                                {item.isAvailable ? "Live" : "Off"}
                               </div>
+                            </div>
 
-                              {/* Card body */}
-                              <div className="p-2.5">
-                                {isEditing ? (
-                                  /* ── Edit mode ── */
-                                  <div className="space-y-1.5">
-                                    <input value={editForm.name} onChange={(e) => setEditForm(s => ({ ...s, name: e.target.value }))}
-                                      className="w-full text-xs font-bold border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-200" />
-                                    <div className="relative">
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">$</span>
-                                      <input type="number" min={0} step={0.01} value={editForm.price || ""}
-                                        onChange={(e) => setEditForm(s => ({ ...s, price: Number(e.target.value) }))}
-                                        className="w-full text-xs border border-slate-200 rounded-lg pl-5 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-200" />
-                                    </div>
-                                    <input value={editForm.description} onChange={(e) => setEditForm(s => ({ ...s, description: e.target.value }))}
-                                      placeholder="Description"
-                                      className="w-full text-[10px] border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-200 text-slate-500" />
-                                    <div className="flex gap-1.5 pt-1">
-                                      <button onClick={() => saveEdit(item.id)} disabled={savingEdit || !editForm.name.trim() || editForm.price <= 0}
-                                        className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg text-white transition-all disabled:opacity-40"
-                                        style={{ background: accent }}>
-                                        {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
-                                      </button>
-                                      <button onClick={cancelEdit}
-                                        className="flex-1 text-[10px] font-bold py-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  /* ── Display mode ── */
-                                  <>
-                                    <div className="flex items-start justify-between gap-1">
-                                      <p className={`text-xs font-bold leading-tight line-clamp-2 ${item.isAvailable ? "text-slate-800" : "text-slate-400"}`}>
-                                        {item.name}
-                                      </p>
-                                      <span className="text-xs font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>
-                                        ${item.price.toFixed(2)}
-                                      </span>
-                                    </div>
-                                    {item.description && <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>}
-
-                                    {/* Controls */}
-                                    <div className="flex items-center gap-1 mt-2 pt-1.5 border-t border-slate-50">
-                                      {/* Toggle */}
-                                      <button onClick={() => toggleItem(item.id, item.isAvailable)} title={item.isAvailable ? "Hide from menu" : "Show on menu"}
-                                        className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md transition-colors"
-                                        style={item.isAvailable ? { background: `${accent}12`, color: accent } : { background: "#f1f5f9", color: "#94a3b8" }}>
-                                        <Eye className="w-2.5 h-2.5" />
-                                      </button>
-                                      {/* Edit */}
-                                      <button onClick={() => startEdit(item)} title="Edit item"
-                                        className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">
-                                        <Pencil className="w-2.5 h-2.5" />
-                                      </button>
-                                      {/* Delete */}
-                                      <button onClick={() => delItem(item.id)} title="Delete item"
-                                        className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto">
-                                        <Trash2 className="w-2.5 h-2.5" />
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
+                            {/* Body */}
+                            <div className="p-2.5">
+                              <div className="flex items-start justify-between gap-1">
+                                <p className={`text-xs font-bold leading-tight line-clamp-2 ${item.isAvailable ? "text-slate-800" : "text-slate-400"}`}>{item.name}</p>
+                                <span className="text-xs font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>${item.price.toFixed(2)}</span>
                               </div>
-                            </motion.div>
-                          );
-                        })}
+                              {item.description && <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>}
+
+                              {/* Controls row */}
+                              <div className="flex items-center gap-1 mt-2 pt-1.5 border-t border-slate-50">
+                                {/* View */}
+                                <button onClick={() => openView(item)} title="View details"
+                                  className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">
+                                  <Eye className="w-2.5 h-2.5" />
+                                </button>
+                                {/* Edit */}
+                                <button onClick={() => openEdit(item)} title="Edit item"
+                                  className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">
+                                  <Pencil className="w-2.5 h-2.5" />
+                                </button>
+                                {/* Disable / Enable */}
+                                <button onClick={() => toggleItem(item.id, item.isAvailable)} title={item.isAvailable ? "Disable item" : "Enable item"}
+                                  className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md transition-colors ${item.isAvailable ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-amber-50 text-amber-600 hover:bg-amber-100"}`}>
+                                  <Power className="w-2.5 h-2.5" />
+                                </button>
+                                {/* Delete */}
+                                <button onClick={() => delItem(item.id)} title="Delete item"
+                                  className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto">
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -753,6 +720,195 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
           </div>
         );
       })}
+
+      {/* ═══════════ View Item Popup ═══════════ */}
+      <AnimatePresence>
+        {viewModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setViewModal(null)}>
+            <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }} transition={{ type: "spring", duration: 0.3 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              {/* Image carousel */}
+              {viewModal.images && viewModal.images.length > 0 ? (
+                <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden">
+                  <img src={viewModal.images[viewSlide]} alt={viewModal.name} className="w-full h-full object-cover" />
+                  {viewModal.images.length > 1 && (
+                    <>
+                      <button onClick={() => setViewSlide(s => (s - 1 + viewModal.images.length) % viewModal.images.length)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors">
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setViewSlide(s => (s + 1) % viewModal.images.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {viewModal.images.map((_: string, idx: number) => (
+                          <button key={idx} onClick={() => setViewSlide(idx)}
+                            className={`w-2 h-2 rounded-full transition-all ${viewSlide === idx ? "bg-white scale-125" : "bg-white/50"}`} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <button onClick={() => setViewModal(null)} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                  <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold backdrop-blur-md ${viewModal.isAvailable ? "bg-emerald-500/90 text-white" : "bg-red-500/80 text-white"}`}>
+                    {viewModal.isAvailable ? "Live" : "Disabled"}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative aspect-[16/10] bg-slate-50 flex items-center justify-center">
+                  <span className="text-5xl opacity-10">{CATEGORY_EMOJI[categories.find(c => c.id === viewModal.categoryId)?.name ?? ""] ?? "🍽️"}</span>
+                  <button onClick={() => setViewModal(null)} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-300 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className="text-lg font-bold text-slate-800">{viewModal.name}</h3>
+                  <span className="text-lg font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>${viewModal.price.toFixed(2)}</span>
+                </div>
+                {viewModal.description && <p className="text-sm text-slate-500 mb-3">{viewModal.description}</p>}
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 font-medium">
+                    {CATEGORY_EMOJI[categories.find(c => c.id === viewModal.categoryId)?.name ?? ""] ?? "🍽️"}{" "}
+                    {categories.find(c => c.id === viewModal.categoryId)?.name}
+                  </span>
+                  {viewModal.images && viewModal.images.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 font-medium">{viewModal.images.length} photo{viewModal.images.length > 1 ? "s" : ""}</span>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+                  <button onClick={() => { openEdit(viewModal); setViewModal(null); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl transition-colors text-white"
+                    style={{ background: accent }}>
+                    <Pencil className="w-3.5 h-3.5" /> Edit Item
+                  </button>
+                  <button onClick={() => setViewModal(null)}
+                    className="flex-1 text-xs font-bold py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════ Edit Item Popup ═══════════ */}
+      <AnimatePresence>
+        {editModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setEditModal(null)}>
+            <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }} transition={{ type: "spring", duration: 0.3 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="sticky top-0 z-10 px-5 py-3.5 flex items-center justify-between border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: accent }}>
+                    <Pencil className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Edit Item</h3>
+                    <p className="text-[10px] text-slate-400">Update details, photos & category</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditModal(null)} className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Item Name *</label>
+                  <input value={editForm.name} onChange={(e) => setEditForm(s => ({ ...s, name: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200" />
+                </div>
+
+                {/* Price + Category */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Price *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+                      <input type="number" min={0} step={0.01} value={editForm.price || ""}
+                        onChange={(e) => setEditForm(s => ({ ...s, price: Number(e.target.value) }))}
+                        className="w-full border border-slate-200 rounded-xl pl-6 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Category</label>
+                    <select value={editForm.categoryId} onChange={(e) => setEditForm(s => ({ ...s, categoryId: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white">
+                      {categories.map(c => <option key={c.id} value={c.id}>{CATEGORY_EMOJI[c.name] ?? "🍽️"} {c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
+                  <textarea value={editForm.description} onChange={(e) => setEditForm(s => ({ ...s, description: e.target.value }))}
+                    rows={2} placeholder="Describe this item..."
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 resize-none" />
+                </div>
+
+                {/* Photos */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Photos</label>
+                    <span className="text-[10px] font-bold text-slate-400">{editForm.images.length}/5</span>
+                  </div>
+                  {editForm.images.length > 0 && (
+                    <div className="grid grid-cols-5 gap-2 mb-2">
+                      {editForm.images.map((img, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                          <button type="button" onClick={() => setEditForm(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) }))}
+                            className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Trash2 className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {editForm.images.length < 5 && (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setEditDragOver(true); }}
+                      onDragLeave={() => setEditDragOver(false)}
+                      onDrop={(e) => { e.preventDefault(); setEditDragOver(false); handleEditFiles(e.dataTransfer.files); }}
+                      onClick={() => editFileRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-all ${editDragOver ? "border-sky-400 bg-sky-50" : "border-slate-200 hover:border-slate-300"}`}>
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><Upload className="w-3.5 h-3.5 text-slate-400" /></div>
+                      <div><p className="text-xs font-medium text-slate-500">Drop or <span style={{ color: accent }}>browse</span></p><p className="text-[10px] text-slate-400">{5 - editForm.images.length} more allowed</p></div>
+                      <input ref={editFileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleEditFiles(e.target.files)} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-2">
+                  <button onClick={saveEdit} disabled={savingEdit || !editForm.name.trim() || editForm.price <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 text-white text-sm font-bold py-3 rounded-xl transition-all disabled:opacity-40 active:scale-[0.98]"
+                    style={{ background: accent }}>
+                    {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+                  </button>
+                  <button onClick={() => setEditModal(null)}
+                    className="px-5 text-sm font-bold py-3 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
