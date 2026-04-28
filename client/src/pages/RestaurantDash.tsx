@@ -4,7 +4,7 @@ import {
   LayoutDashboard, UtensilsCrossed, QrCode, Brain, ClipboardList,
   MessageSquare, Plus, Trash2, Eye, Download, ChevronDown, ChevronUp,
   TrendingUp, ShoppingBag as BagIcon, Star, X, Upload, CheckCircle2,
-  AlertCircle, Clock, ArrowRight, Image as ImageIcon, Loader2,
+  AlertCircle, Clock, ArrowRight, Image as ImageIcon, Loader2, Pencil, Save,
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -401,7 +401,10 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
   const [dragOver, setDragOver] = useState(false);
   const [savingItem, setSavingItem] = useState(false);
   const [savingCat, setSavingCat] = useState(false);
-  const [activeCat, setActiveCat] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; price: number; description: string }>({ name: "", price: 0, description: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableCategories = MENU_CATEGORIES.filter(cat => !categories.some(c => c.name === cat));
@@ -446,19 +449,32 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
     } finally { setSavingItem(false); }
   };
 
-  const delItem = async (id: string) => { await api.delete(`/restaurant/menu/items/${id}`); load(); flash("Item removed"); };
+  const delItem = async (id: string) => {
+    if (!confirm("Delete this item?")) return;
+    await api.delete(`/restaurant/menu/items/${id}`); load(); flash("Item removed");
+  };
   const toggleItem = async (id: string, current: boolean) => { await api.put(`/restaurant/menu/items/${id}`, { isAvailable: !current }); load(); };
 
-  const totalItems = categories.reduce((s, c) => s + c.items.length, 0);
-
-  const jumpTo = (catId: string) => {
-    setActiveCat(catId);
-    document.getElementById(`cat-${catId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const startEdit = (item: Item) => {
+    setEditingItem(item.id);
+    setEditForm({ name: item.name, price: item.price, description: item.description ?? "" });
   };
+  const cancelEdit = () => { setEditingItem(null); };
+  const saveEdit = async (id: string) => {
+    if (!editForm.name.trim() || editForm.price <= 0) return;
+    setSavingEdit(true);
+    try {
+      await api.put(`/restaurant/menu/items/${id}`, { name: editForm.name.trim(), price: editForm.price, description: editForm.description });
+      load(); flash("Item updated"); setEditingItem(null);
+    } finally { setSavingEdit(false); }
+  };
+
+  const toggleCollapse = (catId: string) => setCollapsed(p => ({ ...p, [catId]: !p[catId] }));
+  const totalItems = categories.reduce((s, c) => s + c.items.length, 0);
 
   return (
     <div className="space-y-4">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-800">Menu</h2>
@@ -472,29 +488,26 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
         </motion.button>
       </div>
 
-      {/* ── Category chips ── */}
+      {/* Category chips */}
       {categories.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: "none" }}>
           {categories.map(cat => {
             const emoji = CATEGORY_EMOJI[cat.name] ?? "🍽️";
-            const isActive = activeCat === cat.id;
+            const isOpen = !collapsed[cat.id];
             return (
-              <motion.button key={cat.id} whileTap={{ scale: 0.92 }} onClick={() => jumpTo(cat.id)}
+              <motion.button key={cat.id} whileTap={{ scale: 0.92 }}
+                onClick={() => { setCollapsed(p => ({ ...p, [cat.id]: false })); document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
                 className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border"
-                style={isActive
-                  ? { background: accent, color: "white", borderColor: accent }
-                  : { background: "white", color: "#475569", borderColor: "#e2e8f0" }
-                }
-              >
+                style={isOpen ? { background: `${accent}10`, color: accent, borderColor: `${accent}30` } : { background: "white", color: "#475569", borderColor: "#e2e8f0" }}>
                 <span className="text-xs">{emoji}</span> {cat.name}
-                {cat.items.length > 0 && <span className={`text-[9px] ${isActive ? "text-white/70" : "text-slate-400"}`}>{cat.items.length}</span>}
+                {cat.items.length > 0 && <span className="text-[9px] opacity-50">{cat.items.length}</span>}
               </motion.button>
             );
           })}
         </div>
       )}
 
-      {/* ── Add Item form ── */}
+      {/* Add Item form */}
       <AnimatePresence>
         {showAddItem && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
@@ -520,7 +533,6 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                   <option value="">Category *</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{CATEGORY_EMOJI[c.name] ?? "🍽️"} {c.name}</option>)}
                 </select>
-
                 {/* Photos */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -528,20 +540,12 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                     <span className="text-[10px] font-bold text-slate-400">{newItem.images.length}/5</span>
                   </div>
                   {newItem.images.length < 5 && (
-                    <div
-                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                      onDragLeave={() => setDragOver(false)}
+                    <div onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
                       onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50" : "border-slate-200 hover:border-slate-300"}`}
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                        <Upload className="w-4 h-4 text-slate-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-500">Drop or <span style={{ color: accent }}>browse</span></p>
-                        <p className="text-[10px] text-slate-400">up to 5 photos</p>
-                      </div>
+                      className={`border-2 border-dashed rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50" : "border-slate-200 hover:border-slate-300"}`}>
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Upload className="w-4 h-4 text-slate-400" /></div>
+                      <div><p className="text-xs font-medium text-slate-500">Drop or <span style={{ color: accent }}>browse</span></p><p className="text-[10px] text-slate-400">up to 5 photos</p></div>
                       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                     </div>
                   )}
@@ -551,15 +555,12 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
                         <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 group">
                           <img src={img} alt="" className="w-full h-full object-cover" />
                           <button type="button" onClick={(e) => { e.stopPropagation(); setNewItem(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) })); }}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-2 h-2" />
-                          </button>
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-2 h-2" /></button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-
                 <button onClick={addItem} disabled={savingItem || !newItem.name.trim() || !newItem.categoryId || newItem.price <= 0}
                   className="text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.97]"
                   style={{ background: accent }}>
@@ -571,7 +572,7 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
         )}
       </AnimatePresence>
 
-      {/* ── Add category ── */}
+      {/* Add category */}
       <div className="flex gap-2">
         <select value={newCat} onChange={(e) => setNewCat(e.target.value)}
           className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white">
@@ -581,12 +582,11 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
         <button onClick={addCat} disabled={!newCat || savingCat}
           className="text-white text-xs font-bold px-3.5 py-2 rounded-xl disabled:opacity-40 flex items-center gap-1 shrink-0 transition-colors"
           style={{ background: accent }}>
-          {savingCat ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-          Add
+          {savingCat ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Add
         </button>
       </div>
 
-      {/* ── Empty state ── */}
+      {/* Empty */}
       {categories.length === 0 && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border-2 border-dashed border-slate-200 py-12 text-center bg-white">
@@ -596,86 +596,160 @@ function MenuTab({ categories, load, flash, accent }: { categories: Category[]; 
         </motion.div>
       )}
 
-      {/* ── Category sections ── */}
+      {/* ── Collapsible Category Sections ── */}
       {categories.map((cat) => {
         const emoji = CATEGORY_EMOJI[cat.name] ?? "🍽️";
+        const isOpen = !collapsed[cat.id];
         return (
-          <div key={cat.id} id={`cat-${cat.id}`} className="space-y-2.5">
-            {/* Category header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div key={cat.id} id={`cat-${cat.id}`} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* Category header — clickable to collapse */}
+            <button
+              onClick={() => toggleCollapse(cat.id)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50/80 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
                 <span className="text-lg">{emoji}</span>
-                <h3 className="font-bold text-sm text-slate-800">{cat.name}</h3>
-                <span className="text-[10px] text-slate-400 font-medium">{cat.items.length}</span>
+                <div className="text-left">
+                  <h3 className="font-bold text-sm text-slate-800 leading-tight">{cat.name}</h3>
+                  <p className="text-[10px] text-slate-400">{cat.items.length} item{cat.items.length !== 1 ? "s" : ""}</p>
+                </div>
               </div>
-              <button onClick={() => delCat(cat.id, cat.name)} className="p-1 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors">
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* Items grid */}
-            {cat.items.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-100 py-6 text-center">
-                <p className="text-xs text-slate-400">No items</p>
-                <button onClick={() => setShowAddItem(true)} className="mt-1 text-[10px] font-bold transition-colors" style={{ color: accent }}>
-                  + Add item
-                </button>
+              <div className="flex items-center gap-1.5">
+                <span
+                  onClick={(e) => { e.stopPropagation(); delCat(cat.id, cat.name); }}
+                  className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </span>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-100 transition-transform" style={{ transform: isOpen ? "rotate(0)" : "rotate(-90deg)" }}>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                {cat.items.map((item, i) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03, duration: 0.18 }}
-                    className={`bg-white rounded-2xl border border-slate-100 overflow-hidden group hover:shadow-md transition-shadow ${!item.isAvailable ? "opacity-50 grayscale" : ""}`}
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
-                      {item.images?.[0] ? (
-                        <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-3xl opacity-15">{emoji}</span>
-                        </div>
-                      )}
-                      {item.images && item.images.length > 1 && (
-                        <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md">
-                          {item.images.length} pics
-                        </div>
-                      )}
-                    </div>
+            </button>
 
-                    {/* Body */}
-                    <div className="p-2.5">
-                      <div className="flex items-start justify-between gap-1">
-                        <p className={`text-xs font-bold leading-tight line-clamp-2 ${item.isAvailable ? "text-slate-800" : "text-slate-400"}`}>
-                          {item.name}
-                        </p>
-                        <span className="text-xs font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>
-                          ${item.price.toFixed(2)}
-                        </span>
-                      </div>
-                      {item.description && <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>}
-
-                      {/* Actions row */}
-                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-50">
-                        <button onClick={() => toggleItem(item.id, item.isAvailable)}
-                          className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md transition-colors"
-                          style={item.isAvailable ? { background: `${accent}15`, color: accent } : { background: "#f1f5f9", color: "#94a3b8" }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: item.isAvailable ? accent : "#cbd5e1" }} />
-                          {item.isAvailable ? "Live" : "Off"}
-                        </button>
-                        <button onClick={() => delItem(item.id)} className="p-1 rounded-md text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors">
-                          <Trash2 className="w-2.5 h-2.5" />
+            {/* Collapsible items */}
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="border-t border-slate-100 px-3 py-3">
+                    {cat.items.length === 0 ? (
+                      <div className="py-4 text-center">
+                        <p className="text-xs text-slate-400">No items in this category</p>
+                        <button onClick={() => { setNewItem(s => ({ ...s, categoryId: cat.id })); setShowAddItem(true); }}
+                          className="mt-1.5 text-[10px] font-bold transition-colors" style={{ color: accent }}>
+                          + Add first item
                         </button>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                        {cat.items.map((item, i) => {
+                          const isEditing = editingItem === item.id;
+                          return (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.03, duration: 0.15 }}
+                              className={`rounded-xl border overflow-hidden group transition-all ${isEditing ? "border-sky-300 shadow-md ring-1 ring-sky-200" : "border-slate-100 hover:shadow-md"} ${!item.isAvailable && !isEditing ? "opacity-50 grayscale" : ""}`}
+                            >
+                              {/* Image */}
+                              <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+                                {item.images?.[0] ? (
+                                  <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="text-2xl opacity-15">{emoji}</span>
+                                  </div>
+                                )}
+                                {item.images && item.images.length > 1 && (
+                                  <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md">
+                                    {item.images.length} pics
+                                  </div>
+                                )}
+                                {/* Status overlay */}
+                                <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold backdrop-blur-md ${item.isAvailable ? "bg-emerald-500/90 text-white" : "bg-black/40 text-white/80"}`}>
+                                  {item.isAvailable ? "Live" : "Off"}
+                                </div>
+                              </div>
+
+                              {/* Card body */}
+                              <div className="p-2.5">
+                                {isEditing ? (
+                                  /* ── Edit mode ── */
+                                  <div className="space-y-1.5">
+                                    <input value={editForm.name} onChange={(e) => setEditForm(s => ({ ...s, name: e.target.value }))}
+                                      className="w-full text-xs font-bold border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-200" />
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">$</span>
+                                      <input type="number" min={0} step={0.01} value={editForm.price || ""}
+                                        onChange={(e) => setEditForm(s => ({ ...s, price: Number(e.target.value) }))}
+                                        className="w-full text-xs border border-slate-200 rounded-lg pl-5 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-200" />
+                                    </div>
+                                    <input value={editForm.description} onChange={(e) => setEditForm(s => ({ ...s, description: e.target.value }))}
+                                      placeholder="Description"
+                                      className="w-full text-[10px] border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-200 text-slate-500" />
+                                    <div className="flex gap-1.5 pt-1">
+                                      <button onClick={() => saveEdit(item.id)} disabled={savingEdit || !editForm.name.trim() || editForm.price <= 0}
+                                        className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg text-white transition-all disabled:opacity-40"
+                                        style={{ background: accent }}>
+                                        {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                                      </button>
+                                      <button onClick={cancelEdit}
+                                        className="flex-1 text-[10px] font-bold py-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* ── Display mode ── */
+                                  <>
+                                    <div className="flex items-start justify-between gap-1">
+                                      <p className={`text-xs font-bold leading-tight line-clamp-2 ${item.isAvailable ? "text-slate-800" : "text-slate-400"}`}>
+                                        {item.name}
+                                      </p>
+                                      <span className="text-xs font-extrabold shrink-0 tabular-nums" style={{ color: accent }}>
+                                        ${item.price.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    {item.description && <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>}
+
+                                    {/* Controls */}
+                                    <div className="flex items-center gap-1 mt-2 pt-1.5 border-t border-slate-50">
+                                      {/* Toggle */}
+                                      <button onClick={() => toggleItem(item.id, item.isAvailable)} title={item.isAvailable ? "Hide from menu" : "Show on menu"}
+                                        className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md transition-colors"
+                                        style={item.isAvailable ? { background: `${accent}12`, color: accent } : { background: "#f1f5f9", color: "#94a3b8" }}>
+                                        <Eye className="w-2.5 h-2.5" />
+                                      </button>
+                                      {/* Edit */}
+                                      <button onClick={() => startEdit(item)} title="Edit item"
+                                        className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">
+                                        <Pencil className="w-2.5 h-2.5" />
+                                      </button>
+                                      {/* Delete */}
+                                      <button onClick={() => delItem(item.id)} title="Delete item"
+                                        className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-1 rounded-md bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto">
+                                        <Trash2 className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}
