@@ -388,15 +388,15 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
   );
 }
 
-const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
-  "Vegan":          { emoji: "🌱", color: "text-green-700",  bg: "bg-green-50 border-green-200" },
-  "Gluten-Free":    { emoji: "🌾", color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200" },
-  "Vegetarian":     { emoji: "🥬", color: "text-emerald-700",bg: "bg-emerald-50 border-emerald-200" },
-  "Non-Vegetarian": { emoji: "🥩", color: "text-red-700",    bg: "bg-red-50 border-red-200" },
-  "Sweets":         { emoji: "🍬", color: "text-pink-700",   bg: "bg-pink-50 border-pink-200" },
-  "Desserts":       { emoji: "🍰", color: "text-rose-700",   bg: "bg-rose-50 border-rose-200" },
-  "Beverages":      { emoji: "☕", color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
-  "Alcohol":        { emoji: "🍺", color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
+const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string; accent: string; grad: string }> = {
+  "Vegan":          { emoji: "🌱", color: "text-green-700",   bg: "bg-green-50 border-green-200",   accent: "#15803d", grad: "from-green-400 to-emerald-500" },
+  "Gluten-Free":    { emoji: "🌾", color: "text-yellow-700",  bg: "bg-yellow-50 border-yellow-200", accent: "#a16207", grad: "from-yellow-400 to-amber-500" },
+  "Vegetarian":     { emoji: "🥬", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200",accent:"#047857", grad: "from-emerald-400 to-teal-500" },
+  "Non-Vegetarian": { emoji: "🥩", color: "text-red-700",     bg: "bg-red-50 border-red-200",       accent: "#b91c1c", grad: "from-red-400 to-rose-500" },
+  "Sweets":         { emoji: "🍬", color: "text-pink-700",    bg: "bg-pink-50 border-pink-200",     accent: "#be185d", grad: "from-pink-400 to-fuchsia-500" },
+  "Desserts":       { emoji: "🍰", color: "text-rose-700",    bg: "bg-rose-50 border-rose-200",     accent: "#be123c", grad: "from-rose-400 to-pink-500" },
+  "Beverages":      { emoji: "☕", color: "text-amber-700",   bg: "bg-amber-50 border-amber-200",   accent: "#b45309", grad: "from-amber-400 to-orange-500" },
+  "Alcohol":        { emoji: "🍺", color: "text-orange-700",  bg: "bg-orange-50 border-orange-200", accent: "#c2410c", grad: "from-orange-400 to-amber-500" },
 };
 
 /* ---------- Menu ---------- */
@@ -458,88 +458,106 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
 
   return (
     <div className="space-y-5">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-800">Menu</h2>
-            <div className="flex-1 h-px bg-slate-200 w-16" />
-          </div>
+          <h2 className="text-lg font-bold text-slate-800">Menu</h2>
           <p className="text-sm text-slate-400 mt-0.5">{categories.length} categories · {totalItems} items</p>
         </div>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.96 }}
           onClick={() => setShowAddItem(!showAddItem)}
-          className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm ${showAddItem ? "bg-slate-800 text-white" : "bg-sky-500 text-white hover:bg-sky-600"}`}
+          className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-2xl transition-all shadow-sm ${showAddItem ? "bg-slate-800 text-white" : "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-sky-200"}`}
         >
-          <Plus className={`w-4 h-4 transition-transform ${showAddItem ? "rotate-45" : ""}`} />
+          <Plus className={`w-4 h-4 transition-transform duration-300 ${showAddItem ? "rotate-45" : ""}`} />
           {showAddItem ? "Cancel" : "Add Item"}
-        </button>
+        </motion.button>
       </div>
 
-      {/* Category quick-jump chips */}
+      {/* ── Category quick-jump chips ── */}
       {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: "none" }}>
           {categories.map(cat => {
-            const meta = CATEGORY_META[cat.name] ?? { emoji: "🍽️", color: "text-slate-600", bg: "bg-slate-50 border-slate-200" };
+            const meta = CATEGORY_META[cat.name] ?? { emoji: "🍽️", color: "text-slate-600", bg: "bg-slate-50 border-slate-200", accent: "#64748b", grad: "from-slate-400 to-slate-500" };
             return (
-              <button
+              <motion.button
                 key={cat.id}
+                whileTap={{ scale: 0.94 }}
                 onClick={() => document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all hover:shadow-sm ${meta.bg} ${meta.color}`}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all hover:shadow-md ${meta.bg} ${meta.color}`}
               >
-                <span>{meta.emoji}</span>
+                <span className="text-sm">{meta.emoji}</span>
                 <span>{cat.name}</span>
-                <span className="opacity-60">({cat.items.length})</span>
-              </button>
+                {cat.items.length > 0 && <span className="opacity-50 text-[10px]">{cat.items.length}</span>}
+              </motion.button>
             );
           })}
         </div>
       )}
 
-      {/* Add Item Form */}
+      {/* ── Add Item form ── */}
       <AnimatePresence>
         {showAddItem && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
-              <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3.5 flex items-center gap-2">
-                <Plus className="w-4 h-4 text-white" />
-                <span className="text-white font-semibold text-sm">New Menu Item</span>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+              {/* Form header */}
+              <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-4 flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <div className="text-white font-bold text-sm">New Menu Item</div>
+                  <div className="text-white/70 text-[10px]">Fill in the details below</div>
+                </div>
               </div>
+
               <div className="p-5 grid gap-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Item Name *</label>
-                    <input value={newItem.name} onChange={(e) => setNewItem((s) => ({ ...s, name: e.target.value }))} placeholder="e.g. Caesar Salad" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Name *</label>
+                    <input value={newItem.name} onChange={(e) => setNewItem((s) => ({ ...s, name: e.target.value }))} placeholder="e.g. Caesar Salad"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-all" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Price *</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
-                      <input type="number" min={0} step={0.01} value={newItem.price || ""} onChange={(e) => setNewItem((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="0.00" className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">$</span>
+                      <input type="number" min={0} step={0.01} value={newItem.price || ""} onChange={(e) => setNewItem((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="0.00"
+                        className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-all" />
                     </div>
                   </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Description</label>
-                  <input value={newItem.description} onChange={(e) => setNewItem((s) => ({ ...s, description: e.target.value }))} placeholder="Brief description (optional)" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
+                  <input value={newItem.description} onChange={(e) => setNewItem((s) => ({ ...s, description: e.target.value }))} placeholder="Brief description (optional)"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-all" />
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Category *</label>
-                  <select value={newItem.categoryId} onChange={(e) => setNewItem((s) => ({ ...s, categoryId: e.target.value }))} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white">
+                  <select value={newItem.categoryId} onChange={(e) => setNewItem((s) => ({ ...s, categoryId: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white transition-all">
                     <option value="">Select a category...</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{CATEGORY_META[c.name]?.emoji ?? "🍽️"} {c.name}</option>)}
                   </select>
                 </div>
 
-                {/* Image upload */}
+                {/* Photo upload */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-2">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <ImageIcon className="w-3 h-3" /> Photos
                     </label>
-                    <span className={`text-xs font-bold ${newItem.images.length >= 5 ? "text-amber-500" : "text-slate-400"}`}>{newItem.images.length}/5</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${newItem.images.length >= 5 ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400"}`}>
+                      {newItem.images.length}/5
+                    </span>
                   </div>
                   {newItem.images.length < 5 && (
                     <div
@@ -547,33 +565,43 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
                       onDragLeave={() => setDragOver(false)}
                       onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50/60 scale-[1.01]" : "border-slate-200 hover:border-sky-300 hover:bg-sky-50/30"}`}
+                      className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center gap-2.5 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50 scale-[1.02]" : "border-slate-200 hover:border-sky-300 hover:bg-slate-50"}`}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
                         <Upload className="w-5 h-5 text-slate-400" />
                       </div>
-                      <span className="text-xs text-slate-400 text-center">Drop images here or <span className="text-sky-500 font-semibold">browse</span><br /><span className="text-slate-300">JPG, PNG, WEBP up to 5 photos</span></span>
+                      <div className="text-center">
+                        <p className="text-xs font-medium text-slate-500">Drop images or <span className="text-sky-500">browse</span></p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">JPG · PNG · WEBP · up to 5 photos</p>
+                      </div>
                       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                     </div>
                   )}
                   {newItem.images.length > 0 && (
-                    <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                    <div className="grid grid-cols-5 gap-2 mt-2">
                       {newItem.images.map((img, idx) => (
-                        <div key={idx} className="relative shrink-0 w-18 h-18 rounded-xl overflow-hidden border border-slate-200 group">
-                          <img src={img} alt="" className="w-[72px] h-[72px] object-cover" />
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setNewItem(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) })); }}
-                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-3 h-3" />
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                          {idx === 0 && <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[8px] font-bold text-center py-0.5">Cover</div>}
+                          <button type="button"
+                            onClick={(e) => { e.stopPropagation(); setNewItem(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) })); }}
+                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="w-2.5 h-2.5" />
                           </button>
-                          {idx === 0 && <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold bg-black/50 text-white px-1 rounded">Cover</div>}
                         </div>
                       ))}
+                      {newItem.images.length < 5 && (
+                        <button onClick={() => fileInputRef.current?.click()}
+                          className="aspect-square rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center hover:border-sky-300 hover:bg-sky-50 transition-colors">
+                          <Plus className="w-4 h-4 text-slate-300" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
 
                 <button onClick={addItem} disabled={savingItem || !newItem.name.trim() || !newItem.categoryId || newItem.price <= 0}
-                  className="bg-sky-500 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-sky-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm">
+                  className="bg-gradient-to-r from-sky-500 to-blue-600 text-white text-sm font-bold px-4 py-3.5 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-sky-200/50 active:scale-[0.98]">
                   {savingItem ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><CheckCircle2 className="w-4 h-4" /> Save Item</>}
                 </button>
               </div>
@@ -582,91 +610,140 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
         )}
       </AnimatePresence>
 
-      {/* Add category row */}
-      <div className="flex gap-2 bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
-        <select value={newCat} onChange={(e) => setNewCat(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
-          <option value="">+ Add a new category...</option>
+      {/* ── Add Category ── */}
+      <div className="flex gap-2 bg-white rounded-2xl border border-slate-200 p-3 shadow-sm">
+        <select value={newCat} onChange={(e) => setNewCat(e.target.value)}
+          className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
+          <option value="">+ Enable a category...</option>
           {availableCategories.map(cat => <option key={cat} value={cat}>{CATEGORY_META[cat]?.emoji ?? "🍽️"} {cat}</option>)}
         </select>
-        <button onClick={addCat} disabled={!newCat || savingCat} className="bg-slate-800 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-40 flex items-center gap-1.5 shrink-0">
+        <button onClick={addCat} disabled={!newCat || savingCat}
+          className="bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-slate-700 transition-colors disabled:opacity-40 flex items-center gap-1.5 shrink-0">
           {savingCat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
           Add
         </button>
       </div>
-
-      {availableCategories.length === 0 && categories.length > 0 && <p className="text-xs text-slate-400 text-center">All 8 categories added ✓</p>}
-
-      {categories.length === 0 && (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
-          <UtensilsCrossed className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-medium">No categories yet</p>
-          <p className="text-sm text-slate-400 mt-1">Add a category above to start building your menu</p>
-        </div>
+      {availableCategories.length === 0 && categories.length > 0 && (
+        <p className="text-[11px] text-center text-slate-400 bg-emerald-50 text-emerald-600 rounded-xl py-1.5 font-medium">✓ All 8 categories enabled</p>
       )}
 
-      {/* Category sections */}
+      {/* ── Empty state ── */}
+      {categories.length === 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl border-2 border-dashed border-slate-200 py-14 text-center">
+          <div className="text-5xl mb-4">🍽️</div>
+          <p className="text-slate-700 font-semibold">No menu yet</p>
+          <p className="text-sm text-slate-400 mt-1">Enable a category above, then add your items</p>
+        </motion.div>
+      )}
+
+      {/* ── Category sections — GRID LAYOUT ── */}
       {categories.map((cat) => {
-        const meta = CATEGORY_META[cat.name] ?? { emoji: "🍽️", color: "text-slate-700", bg: "bg-slate-50 border-slate-200" };
+        const meta = CATEGORY_META[cat.name] ?? { emoji: "🍽️", color: "text-slate-700", bg: "bg-slate-50 border-slate-200", accent: "#64748b", grad: "from-slate-400 to-slate-500" };
         return (
-          <div key={cat.id} id={`cat-${cat.id}`} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            {/* Category header */}
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100">
+          <div key={cat.id} id={`cat-${cat.id}`} className="rounded-3xl overflow-hidden shadow-sm border border-slate-200/80">
+            {/* Category banner */}
+            <div className={`relative bg-gradient-to-r ${meta.grad} px-5 py-4 flex items-center justify-between`}>
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border ${meta.bg}`}>{meta.emoji}</div>
+                <div className="w-11 h-11 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center text-2xl shadow-sm">
+                  {meta.emoji}
+                </div>
                 <div>
-                  <h3 className={`font-bold text-sm ${meta.color}`}>{cat.name}</h3>
-                  <p className="text-[10px] text-slate-400">{cat.items.length} item{cat.items.length !== 1 ? "s" : ""}</p>
+                  <h3 className="text-white font-bold text-base leading-tight">{cat.name}</h3>
+                  <p className="text-white/70 text-[11px] font-medium">{cat.items.length} item{cat.items.length !== 1 ? "s" : ""}</p>
                 </div>
               </div>
-              <button onClick={() => delCat(cat.id, cat.name)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors">
+              <button onClick={() => delCat(cat.id, cat.name)}
+                className="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Items */}
-            <div className="divide-y divide-slate-50">
-              {cat.items.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/60 transition-colors">
-                  {item.images?.[0] ? (
-                    <div className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-slate-100 shadow-sm">
-                      <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
-                      {item.images.length > 1 && (
-                        <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[8px] font-bold px-1 rounded">+{item.images.length - 1}</div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="shrink-0 w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-100">
-                      <span className="text-2xl opacity-30">{meta.emoji}</span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-semibold leading-tight ${item.isAvailable ? "text-slate-800" : "text-slate-400 line-through"}`}>{item.name}</div>
-                    {item.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{item.description}</div>}
-                    <div className="mt-1">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${meta.bg} ${meta.color}`}>${item.price.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => toggleItem(item.id, item.isAvailable)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors ${item.isAvailable ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
-                      {item.isAvailable ? "Live" : "Off"}
-                    </button>
-                    <button onClick={() => delItem(item.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+            {/* Items grid */}
+            <div className="bg-white p-4">
+              {cat.items.length === 0 ? (
+                <div className="py-8 text-center">
+                  <div className="text-3xl mb-2 opacity-30">{meta.emoji}</div>
+                  <p className="text-sm text-slate-400">No items yet</p>
+                  <button onClick={() => setShowAddItem(true)}
+                    className="mt-2 text-xs font-semibold text-sky-500 hover:text-sky-600 transition-colors">
+                    + Add first item
+                  </button>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {cat.items.map((item, i) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      className={`rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-white group ${!item.isAvailable ? "opacity-60" : ""}`}
+                    >
+                      {/* Image / placeholder */}
+                      <div className="relative aspect-square overflow-hidden bg-slate-50">
+                        {item.images?.[0] ? (
+                          <img
+                            src={item.images[0]}
+                            alt={item.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${meta.grad} opacity-10`}>
+                            <span className="text-5xl">{meta.emoji}</span>
+                          </div>
+                        )}
+                        {/* No-image placeholder icon */}
+                        {!item.images?.[0] && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-4xl opacity-25">{meta.emoji}</span>
+                          </div>
+                        )}
+                        {/* Status pill */}
+                        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold backdrop-blur-md ${item.isAvailable ? "bg-emerald-500/90 text-white" : "bg-black/40 text-white/80"}`}>
+                          {item.isAvailable ? "● Live" : "● Off"}
+                        </div>
+                        {/* Multi-image badge */}
+                        {item.images?.length > 1 && (
+                          <div className="absolute top-2 right-2 bg-black/50 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                            +{item.images.length - 1}
+                          </div>
+                        )}
+                      </div>
 
-            {cat.items.length === 0 && (
-              <div className="px-4 py-6 text-center">
-                <p className="text-sm text-slate-400">No items yet</p>
-                <button onClick={() => setShowAddItem(true)} className="mt-2 text-xs text-sky-500 hover:text-sky-600 font-medium">
-                  + Add first item
-                </button>
-              </div>
-            )}
+                      {/* Card body */}
+                      <div className="p-2.5">
+                        <p className={`text-xs font-bold leading-tight truncate ${item.isAvailable ? "text-slate-800" : "text-slate-400 line-through"}`}>
+                          {item.name}
+                        </p>
+                        {item.description && (
+                          <p className="text-[10px] text-slate-400 mt-0.5 truncate">{item.description}</p>
+                        )}
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-sm font-extrabold" style={{ color: meta.accent }}>
+                            ${item.price.toFixed(2)}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleItem(item.id, item.isAvailable)}
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-bold transition-colors ${item.isAvailable ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
+                            >
+                              {item.isAvailable ? <Eye className="w-3 h-3" /> : <Eye className="w-3 h-3 opacity-40" />}
+                            </button>
+                            <button
+                              onClick={() => delItem(item.id)}
+                              className="w-6 h-6 rounded-lg flex items-center justify-center bg-red-50 text-red-400 hover:bg-red-100 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       })}
