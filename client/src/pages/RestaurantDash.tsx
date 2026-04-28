@@ -207,11 +207,28 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPwChange, setShowPwChange] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirm: "" });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState("");
 
   const save = async () => {
     setSaving(true);
     try { await api.put("/restaurant/profile", profile); load(); flash("Profile saved"); setEditing(false); }
     finally { setSaving(false); }
+  };
+
+  const changePassword = async () => {
+    if (pwForm.newPassword.length < 6) { setPwError("New password must be at least 6 characters"); return; }
+    if (pwForm.newPassword !== pwForm.confirm) { setPwError("Passwords don't match"); return; }
+    setPwError(""); setPwSaving(true);
+    try {
+      await api.put("/restaurant/change-password", { currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword });
+      flash("Password updated"); setShowPwChange(false); setPwForm({ currentPassword: "", newPassword: "", confirm: "" });
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setPwError(msg ?? "Failed to change password");
+    } finally { setPwSaving(false); }
   };
 
   const sentimentBadge: Record<string, string> = { positive: "bg-emerald-100 text-emerald-700", negative: "bg-red-100 text-red-700", neutral: "bg-amber-100 text-amber-700" };
@@ -384,6 +401,34 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
             </div>
           </div>
         )}
+      </div>
+
+      {/* Change Password */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <button onClick={() => setShowPwChange(!showPwChange)} className="flex items-center justify-between w-full">
+          <h3 className="font-semibold text-slate-800 text-sm">Change Password</h3>
+          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showPwChange ? "rotate-180" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showPwChange && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="grid gap-2.5 mt-3">
+                <input type="password" value={pwForm.currentPassword} onChange={(e) => { setPwForm(s => ({ ...s, currentPassword: e.target.value })); setPwError(""); }}
+                  placeholder="Current password" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                <input type="password" value={pwForm.newPassword} onChange={(e) => { setPwForm(s => ({ ...s, newPassword: e.target.value })); setPwError(""); }}
+                  placeholder="New password (min 6 chars)" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                <input type="password" value={pwForm.confirm} onChange={(e) => { setPwForm(s => ({ ...s, confirm: e.target.value })); setPwError(""); }}
+                  placeholder="Confirm new password" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                {pwError && <p className="text-red-500 text-xs">{pwError}</p>}
+                <button onClick={changePassword} disabled={pwSaving || !pwForm.currentPassword || !pwForm.newPassword || !pwForm.confirm}
+                  className="text-sm font-medium px-4 py-2 rounded-lg text-white transition-all disabled:opacity-40"
+                  style={{ background: accent }}>
+                  {pwSaving ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

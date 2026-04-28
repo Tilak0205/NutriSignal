@@ -1,5 +1,6 @@
 import { Router } from "express";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 import QRCode from "qrcode";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -21,6 +22,22 @@ router.put("/profile", async (req, res) => {
     data: req.body,
   });
   res.json(restaurant);
+});
+
+router.put("/change-password", async (req, res) => {
+  const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+  if (!currentPassword || !newPassword || newPassword.length < 6) {
+    return res.status(400).json({ message: "New password must be at least 6 characters" });
+  }
+  const user = await prisma.restaurantUser.findUnique({ where: { id: req.user?.id ?? "" } });
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.restaurantUser.update({ where: { id: user.id }, data: { passwordHash } });
+  res.json({ message: "Password updated successfully" });
 });
 
 router.get("/menu/categories", async (req, res) => {
