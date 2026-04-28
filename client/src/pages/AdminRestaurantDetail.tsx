@@ -20,14 +20,14 @@ type OrderData = { id: string; status: string; totalAmount: number; createdAt: s
 type FeedbackData = { id: string; rating: number; comment?: string; createdAt: string };
 type QStats = { totalResponses: number; questionStats: Record<string, Record<string, number>> };
 
-const QUESTION_LABELS: Record<string, string> = {
-  emotionalState: "Emotional State",
-  dayContext: "Day Context",
-  energy: "Energy Level",
-  occasion: "Occasion",
-  cravings: "Cravings",
-  dietaryPreference: "Dietary Preference",
-};
+const QUESTION_ORDER: { key: string; label: string }[] = [
+  { key: "emotionalState", label: "What best describes you right now?" },
+  { key: "dayContext", label: "How has your day been?" },
+  { key: "energy", label: "How charged are you?" },
+  { key: "occasion", label: "What's the occasion?" },
+  { key: "cravings", label: "What sounds good right now?" },
+  { key: "dietaryPreference", label: "Dietary preference?" },
+];
 
 const moodColors: Record<string, string> = { positive: "#22c55e", neutral: "#f59e0b", negative: "#ef4444" };
 const moodLabels: Record<string, string> = { positive: "Good Vibes", neutral: "Mellow", negative: "Needs Care" };
@@ -282,11 +282,16 @@ export default function AdminRestaurantDetail() {
           <h3 className="text-sm font-semibold text-slate-800 mb-1">Questionnaire Responses</h3>
           <p className="text-xs text-slate-400 mb-4">{qStats.totalResponses} total responses</p>
           <div className="space-y-2">
-            {Object.entries(qStats.questionStats).map(([key, answers]) => (
+            {QUESTION_ORDER.map(({ key, label }, idx) => {
+              const answers = qStats.questionStats[key];
+              if (!answers) return null;
+              return (
               <div key={key} className="border border-slate-100 rounded-xl overflow-hidden">
                 <button onClick={() => setExpandedQ(expandedQ === key ? null : key)}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <span className="text-sm font-medium text-slate-700">{QUESTION_LABELS[key] ?? key}</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    <span className="text-xs text-slate-400 mr-2">Q{idx + 1}.</span>{label}
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400 font-medium">{Object.values(answers).reduce((s, v) => s + v, 0)} answers</span>
                     <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedQ === key ? "rotate-180" : ""}`} />
@@ -302,7 +307,8 @@ export default function AdminRestaurantDetail() {
                   )}
                 </AnimatePresence>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

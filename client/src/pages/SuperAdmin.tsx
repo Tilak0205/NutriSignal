@@ -25,14 +25,14 @@ type QStats = { totalResponses: number; questionStats: Record<string, Record<str
 
 type Tab = "overview" | "restaurants" | "plans" | "insights";
 
-const QUESTION_LABELS: Record<string, string> = {
-  emotionalState: "What best describes you right now?",
-  dayContext: "How has your day been?",
-  energy: "How charged are you?",
-  occasion: "What's the occasion?",
-  cravings: "What sounds good right now?",
-  dietaryPreference: "Dietary preference?",
-};
+const QUESTION_ORDER: { key: string; label: string }[] = [
+  { key: "emotionalState", label: "What best describes you right now?" },
+  { key: "dayContext", label: "How has your day been?" },
+  { key: "energy", label: "How charged are you?" },
+  { key: "occasion", label: "What's the occasion?" },
+  { key: "cravings", label: "What sounds good right now?" },
+  { key: "dietaryPreference", label: "Dietary preference?" },
+];
 
 function MoodBar({ data, height = 100 }: { data: { sentiment: string; _count: number }[]; height?: number }) {
   const max = Math.max(...data.map(d => d._count), 1);
@@ -549,13 +549,15 @@ export default function SuperAdmin() {
                     <h3 className="font-semibold text-slate-800 text-sm mb-1">Response Summary</h3>
                     <p className="text-xs text-slate-400 mb-4">{qStats.totalResponses} total questionnaire responses</p>
                     <div className="grid grid-cols-3 gap-2">
-                      {Object.entries(qStats.questionStats).map(([key, answers]) => {
+                      {QUESTION_ORDER.map(({ key, label }) => {
+                        const answers = qStats.questionStats[key];
+                        if (!answers) return null;
                         const total = Object.values(answers).reduce((s, v) => s + v, 0);
                         const top = Object.entries(answers).sort((a, b) => b[1] - a[1])[0];
                         return (
                           <div key={key} className="text-center p-2 rounded-xl bg-slate-50">
                             <div className="text-lg font-bold text-slate-800">{total}</div>
-                            <div className="text-[9px] text-slate-400 truncate">{QUESTION_LABELS[key]?.split(" ").slice(0, 3).join(" ") ?? key}</div>
+                            <div className="text-[9px] text-slate-400 truncate">{label.split(" ").slice(0, 3).join(" ")}</div>
                             {top && <div className="text-[9px] text-sky-600 font-medium mt-0.5 truncate capitalize">{top[0].replace(/-/g, " ")}</div>}
                           </div>
                         );
@@ -570,27 +572,33 @@ export default function SuperAdmin() {
                 <div className="bg-white rounded-2xl border border-slate-200 p-5">
                   <h3 className="font-semibold text-slate-800 text-sm mb-4">Detailed Question Breakdown</h3>
                   <div className="space-y-2">
-                    {Object.entries(qStats.questionStats).map(([key, answers]) => (
-                      <div key={key} className="border border-slate-100 rounded-xl overflow-hidden">
-                        <button onClick={() => setExpandedQ(expandedQ === key ? null : key)}
-                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
-                          <span className="text-sm font-medium text-slate-700 text-left">{QUESTION_LABELS[key] ?? key}</span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs text-slate-400 font-medium">{Object.values(answers).reduce((s, v) => s + v, 0)} responses</span>
-                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedQ === key ? "rotate-180" : ""}`} />
-                          </div>
-                        </button>
-                        <AnimatePresence>
-                          {expandedQ === key && (
-                            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-                              <div className="px-4 pb-4">
-                                <HBar data={answers} accent="#0ea5e9" />
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ))}
+                    {QUESTION_ORDER.map(({ key, label }, idx) => {
+                      const answers = qStats.questionStats[key];
+                      if (!answers) return null;
+                      return (
+                        <div key={key} className="border border-slate-100 rounded-xl overflow-hidden">
+                          <button onClick={() => setExpandedQ(expandedQ === key ? null : key)}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
+                            <span className="text-sm font-medium text-slate-700 text-left">
+                              <span className="text-xs text-slate-400 mr-2">Q{idx + 1}.</span>{label}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-slate-400 font-medium">{Object.values(answers).reduce((s, v) => s + v, 0)} responses</span>
+                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedQ === key ? "rotate-180" : ""}`} />
+                            </div>
+                          </button>
+                          <AnimatePresence>
+                            {expandedQ === key && (
+                              <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                                <div className="px-4 pb-4">
+                                  <HBar data={answers} accent="#0ea5e9" />
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
