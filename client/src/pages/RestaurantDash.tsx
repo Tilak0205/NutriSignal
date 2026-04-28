@@ -28,11 +28,11 @@ function relativeTime(date: string): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
 function groupInsightsByDate(insights: Insight[]) {
@@ -1058,10 +1058,42 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
   };
   const toggleGroup = (dateStr: string) => setGroupOverrides(prev => ({ ...prev, [dateStr]: !isGroupExpanded(dateStr) }));
 
-  const sentimentConfig: Record<string, { icon: typeof CheckCircle2; badgeClass: string; color: string; bgClass: string; borderColor: string }> = {
-    positive: { icon: CheckCircle2, badgeClass: "bg-teal-50 text-teal-700 border border-teal-200", color: "#5eaba4", bgClass: "bg-teal-50/30", borderColor: "#99d5cf" },
-    negative: { icon: AlertCircle, badgeClass: "bg-rose-50 text-rose-600 border border-rose-200", color: "#d4838a", bgClass: "bg-rose-50/20", borderColor: "#e8b4b8" },
-    neutral: { icon: Clock, badgeClass: "bg-amber-50 text-amber-700 border border-amber-200", color: "#c9a96e", bgClass: "bg-amber-50/20", borderColor: "#ddc99b" },
+  const sentimentConfig: Record<string, {
+    icon: typeof CheckCircle2;
+    badgeClass: string;
+    color: string;
+    borderColor: string;
+    cardBg: string;
+    timeChipClass: string;
+    timeMetaClass: string;
+  }> = {
+    positive: {
+      icon: CheckCircle2,
+      badgeClass: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+      color: "#3b9d8f",
+      borderColor: "#9ad6cd",
+      cardBg: "#f4fbf9",
+      timeChipClass: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+      timeMetaClass: "text-emerald-700/80",
+    },
+    neutral: {
+      icon: Clock,
+      badgeClass: "bg-blue-50 text-blue-700 border border-blue-200",
+      color: "#6b93c6",
+      borderColor: "#b7cce8",
+      cardBg: "#f6f9ff",
+      timeChipClass: "bg-blue-50 text-blue-700 border border-blue-200",
+      timeMetaClass: "text-blue-700/80",
+    },
+    negative: {
+      icon: AlertCircle,
+      badgeClass: "bg-violet-50 text-violet-700 border border-violet-200",
+      color: "#9a83be",
+      borderColor: "#d0c3e6",
+      cardBg: "#faf7ff",
+      timeChipClass: "bg-violet-50 text-violet-700 border border-violet-200",
+      timeMetaClass: "text-violet-700/80",
+    },
   };
 
   const filteredInsights = useMemo(() => insights.filter(i => {
@@ -1112,7 +1144,7 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
             const count = moodCounts[s];
             const pct = insights.length ? Math.round((count / insights.length) * 100) : 0;
             return (
-              <div key={s} className="rounded-2xl p-3.5 text-center border" style={{ background: `${conf.color}08`, borderColor: conf.borderColor }}>
+              <div key={s} className="rounded-2xl p-3.5 text-center border" style={{ background: conf.cardBg, borderColor: conf.borderColor }}>
                 <div className="text-2xl font-bold" style={{ color: conf.color }}>{count}</div>
                 <div className="text-[10px] font-semibold text-slate-500 mt-0.5">{SENTIMENT_LABEL[s]}</div>
                 <div className="text-[9px] text-slate-400">{pct}%</div>
@@ -1175,7 +1207,7 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                     return (
                       <motion.div key={insight.id} layout data-insight-id={insight.id}
                         className={`rounded-2xl border overflow-hidden ${isHighlighted ? "ring-2 ring-sky-300 shadow-lg" : ""}`}
-                        style={{ background: `${conf.color}06`, borderColor: conf.borderColor, boxShadow: isHighlighted ? undefined : `inset 3px 0 0 ${conf.color}` }}
+                        style={{ background: conf.cardBg, borderColor: conf.borderColor, boxShadow: isHighlighted ? undefined : `inset 3px 0 0 ${conf.color}` }}
                       >
                         <div className="p-3.5">
                           <div className="flex items-center justify-between gap-2">
@@ -1186,12 +1218,12 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                                 {SENTIMENT_LABEL[insight.sentiment] ?? insight.sentiment}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] font-medium text-slate-500 tabular-nums">{relativeTime(insight.createdAt)}</span>
-                            </div>
+                            <span className={`text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full ${conf.timeChipClass}`}>
+                              {relativeTime(insight.createdAt)}
+                            </span>
                           </div>
                           <div className="border-t mt-2.5 pt-2.5 space-y-1.5" style={{ borderColor: `${conf.color}25` }}>
-                            <div className="text-[9px] text-slate-400 mb-1">
+                            <div className={`text-[10px] font-medium mb-1 ${conf.timeMetaClass}`}>
                               {new Date(insight.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                             </div>
                             {tips.map((tip, idx) => (
