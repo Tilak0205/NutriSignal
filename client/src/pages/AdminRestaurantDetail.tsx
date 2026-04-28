@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ShoppingBag, Table2, UtensilsCrossed,
+  ArrowLeft, ShoppingBag, Table2, UtensilsCrossed, Pencil,
   MessageSquare, Users, Star, Save, Loader2, ChevronDown,
 } from "lucide-react";
 import { api } from "../lib/api";
@@ -59,6 +59,7 @@ function HBar({ data, accent }: { data: Record<string, number>; accent: string }
 export default function AdminRestaurantDetail() {
   const { id } = useParams();
   const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [restaurant, setRestaurant] = useState<RestaurantData | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -68,7 +69,7 @@ export default function AdminRestaurantDetail() {
   const [qStats, setQStats] = useState<QStats | null>(null);
   const [allPlans, setAllPlans] = useState<SubPlan[]>([]);
 
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(searchParams.get("edit") === "true");
   const [editForm, setEditForm] = useState({ name: "", phone: "", address: "", description: "", subscriptionPlanId: "" });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
@@ -118,11 +119,9 @@ export default function AdminRestaurantDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="flex items-center gap-3 animate-pulse">
-          <div className="w-12 h-12 rounded-xl bg-slate-200" />
-          <div className="space-y-2"><div className="w-40 h-4 bg-slate-200 rounded" /><div className="w-24 h-3 bg-slate-200 rounded" /></div>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 py-12 flex items-center justify-center gap-3">
+        <Loader2 className="w-5 h-5 animate-spin text-sky-500" />
+        <span className="text-sm text-slate-400">Loading restaurant details...</span>
       </div>
     );
   }
@@ -141,55 +140,60 @@ export default function AdminRestaurantDetail() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => nav("/super-admin")} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors">
-          <ArrowLeft className="w-4 h-4 text-slate-600" />
-        </button>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0" style={{ background: accent }}>
-          {restaurant.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold text-slate-800 truncate">{restaurant.name}</h2>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span className={`font-bold uppercase ${restaurant.isActive ? "text-emerald-600" : "text-slate-400"}`}>
-              {restaurant.isActive ? "Active" : "Inactive"}
-            </span>
-            {restaurant.users?.[0] && <span>· {restaurant.users[0].email}</span>}
-            {restaurant.subscriptionPlan && <span>· {restaurant.subscriptionPlan.name} plan</span>}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="flex items-center gap-3">
+          <button onClick={() => nav("/super-admin")} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors shrink-0">
+            <ArrowLeft className="w-4 h-4 text-slate-600" />
+          </button>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-lg font-bold shrink-0" style={{ background: accent }}>
+            {restaurant.name.charAt(0).toUpperCase()}
           </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-slate-800 truncate">{restaurant.name}</h2>
+            <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap mt-0.5">
+              <span className={`font-bold uppercase ${restaurant.isActive ? "text-emerald-600" : "text-slate-400"}`}>
+                {restaurant.isActive ? "Active" : "Inactive"}
+              </span>
+              {restaurant.users?.[0] && <span>· {restaurant.users[0].email}</span>}
+              {restaurant.subscriptionPlan && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-600">{restaurant.subscriptionPlan.name}</span>}
+              {restaurant.phone && <span>· {restaurant.phone}</span>}
+              {restaurant.address && <span>· {restaurant.address}</span>}
+            </div>
+          </div>
+          <button onClick={() => { const next = !editing; setEditing(next); if (!next) { searchParams.delete("edit"); setSearchParams(searchParams, { replace: true }); } }}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl transition-colors shrink-0"
+            style={editing ? { background: "#1e293b", color: "white" } : { background: "#f1f5f9", color: "#475569" }}>
+            <Pencil className="w-3 h-3" /> {editing ? "Cancel" : "Edit Details"}
+          </button>
         </div>
-        <button onClick={() => setEditing(!editing)}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-          style={editing ? { background: "#1e293b", color: "white" } : { background: "#f1f5f9", color: "#475569" }}>
-          {editing ? "Cancel" : "Edit Details"}
-        </button>
       </div>
 
       {/* Edit form */}
       <AnimatePresence>
         {editing && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Edit Restaurant Details</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Name</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Name *</label>
                   <input value={editForm.name} onChange={(e) => setEditForm(s => ({ ...s, name: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Phone</label>
                   <input value={editForm.phone} onChange={(e) => setEditForm(s => ({ ...s, phone: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Address</label>
                   <input value={editForm.address} onChange={(e) => setEditForm(s => ({ ...s, address: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Subscription Plan</label>
                   <select value={editForm.subscriptionPlanId} onChange={(e) => setEditForm(s => ({ ...s, subscriptionPlanId: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
                     <option value="">No plan</option>
                     {allPlans.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price}/mo ({p.maxTables} tables)</option>)}
                   </select>
@@ -198,10 +202,10 @@ export default function AdminRestaurantDetail() {
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Description</label>
                 <textarea value={editForm.description} onChange={(e) => setEditForm(s => ({ ...s, description: e.target.value }))} rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 resize-none" />
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 resize-none" />
               </div>
               <button onClick={saveEdit} disabled={saving || !editForm.name.trim()}
-                className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all disabled:opacity-40"
+                className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all disabled:opacity-40"
                 style={{ background: accent }}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Changes
               </button>
@@ -215,11 +219,11 @@ export default function AdminRestaurantDetail() {
         {statCards.map(s => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="relative overflow-hidden bg-white rounded-xl border border-slate-200 p-3">
-              <div className={`absolute -top-3 -right-3 w-12 h-12 rounded-full bg-gradient-to-br ${s.color} opacity-10`} />
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white bg-gradient-to-br ${s.color} mb-1.5`}><Icon className="w-3.5 h-3.5" /></div>
-              <div className="text-xl font-bold text-slate-800">{s.value}</div>
-              <div className="text-[10px] text-slate-400">{s.label}</div>
+            <div key={s.label} className="relative overflow-hidden bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
+              <div className={`absolute -top-4 -right-4 w-14 h-14 rounded-full bg-gradient-to-br ${s.color} opacity-10`} />
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white bg-gradient-to-br ${s.color} mb-2`}><Icon className="w-4 h-4" /></div>
+              <div className="text-2xl font-bold text-slate-800">{s.value}</div>
+              <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
             </div>
           );
         })}
@@ -229,7 +233,7 @@ export default function AdminRestaurantDetail() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Mood distribution */}
         {moodDist.length > 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <h3 className="text-sm font-semibold text-slate-800 mb-3">Mood Distribution</h3>
             <div className="flex items-end gap-4 justify-center h-[100px]">
               {moodDist.map(d => {
@@ -250,7 +254,7 @@ export default function AdminRestaurantDetail() {
 
         {/* Rating distribution */}
         {feedbacks.length > 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <h3 className="text-sm font-semibold text-slate-800 mb-3">Rating Distribution</h3>
             <div className="space-y-1.5">
               {[5, 4, 3, 2, 1].map(r => {
@@ -274,18 +278,18 @@ export default function AdminRestaurantDetail() {
 
       {/* Questionnaire stats */}
       {qStats && qStats.totalResponses > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-1">Questionnaire Responses</h3>
-          <p className="text-xs text-slate-400 mb-3">{qStats.totalResponses} total responses</p>
+          <p className="text-xs text-slate-400 mb-4">{qStats.totalResponses} total responses</p>
           <div className="space-y-2">
             {Object.entries(qStats.questionStats).map(([key, answers]) => (
-              <div key={key} className="border border-slate-100 rounded-lg overflow-hidden">
+              <div key={key} className="border border-slate-100 rounded-xl overflow-hidden">
                 <button onClick={() => setExpandedQ(expandedQ === key ? null : key)}
-                  className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 transition-colors">
-                  <span className="text-xs font-semibold text-slate-700">{QUESTION_LABELS[key] ?? key}</span>
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <span className="text-sm font-medium text-slate-700">{QUESTION_LABELS[key] ?? key}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-400">{Object.values(answers).reduce((s, v) => s + v, 0)} answers</span>
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expandedQ === key ? "rotate-180" : ""}`} />
+                    <span className="text-xs text-slate-400 font-medium">{Object.values(answers).reduce((s, v) => s + v, 0)} answers</span>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedQ === key ? "rotate-180" : ""}`} />
                   </div>
                 </button>
                 <AnimatePresence>
@@ -305,7 +309,7 @@ export default function AdminRestaurantDetail() {
 
       {/* Recent orders */}
       {recentOrders.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-3">Recent Orders</h3>
           <div className="space-y-2">
             {recentOrders.map(o => (
