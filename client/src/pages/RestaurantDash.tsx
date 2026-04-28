@@ -1046,7 +1046,6 @@ const SOOTHING_Q_COLORS = ["#7c93c3", "#8bb8a8", "#c4a882", "#a88bc4", "#82b8c4"
 /* ---------- Insights ---------- */
 function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insight[]; accent?: string; highlightInsightId: string; qStats: { totalResponses: number; questionStats: Record<string, Record<string, number>> } | null }) {
   const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [sentimentFilter, setSentimentFilter] = useState("all");
   const [tableFilter, setTableFilter] = useState("");
 
@@ -1078,7 +1077,6 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
     for (const group of groups) {
       if (group.items.some(i => i.id === highlightInsightId)) {
         setGroupOverrides(prev => ({ ...prev, [group.dateStr]: true }));
-        setExpandedCards(prev => ({ ...prev, [highlightInsightId]: true }));
         break;
       }
     }
@@ -1171,7 +1169,6 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                   {group.items.map(insight => {
                     const conf = sentimentConfig[insight.sentiment] ?? sentimentConfig.neutral;
                     const SentimentIcon = conf.icon;
-                    const isExpanded = !!expandedCards[insight.id];
                     const isHighlighted = insight.id === highlightInsightId;
                     const tips = (insight.interactionTips as string[]).slice(0, 3);
 
@@ -1180,7 +1177,7 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                         className={`rounded-2xl border overflow-hidden ${isHighlighted ? "ring-2 ring-sky-300 shadow-lg" : ""}`}
                         style={{ background: `${conf.color}06`, borderColor: conf.borderColor, boxShadow: isHighlighted ? undefined : `inset 3px 0 0 ${conf.color}` }}
                       >
-                        <button onClick={() => setExpandedCards(prev => ({ ...prev, [insight.id]: !isExpanded }))} className="w-full text-left p-3.5">
+                        <div className="p-3.5">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
                               <SentimentIcon className="w-4 h-4 shrink-0" style={{ color: conf.color }} />
@@ -1191,36 +1188,25 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               <span className="text-[10px] font-medium text-slate-500 tabular-nums">{relativeTime(insight.createdAt)}</span>
-                              {isExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
                             </div>
                           </div>
-                          {!isExpanded && (
-                            <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">{tips[0] ?? insight.serviceApproach}</p>
-                          )}
-                        </button>
-
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.16 }} className="overflow-hidden px-3.5 pb-3.5">
-                              <div className="border-t pt-2.5 space-y-1.5" style={{ borderColor: `${conf.color}25` }}>
-                                <div className="text-[9px] text-slate-400 mb-1">
-                                  {new Date(insight.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                                </div>
-                                {tips.map((tip, idx) => (
-                                  <div key={idx} className="flex items-start gap-2">
-                                    <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white mt-0.5" style={{ background: conf.color }}>{idx + 1}</span>
-                                    <span className="text-xs text-slate-700 leading-relaxed">{tip}</span>
-                                  </div>
-                                ))}
-                                {insight.serviceApproach && (
-                                  <p className="text-[10px] text-slate-400 italic pt-1.5 mt-1.5" style={{ borderTop: `1px solid ${conf.color}15` }}>
-                                    💡 {insight.serviceApproach}
-                                  </p>
-                                )}
+                          <div className="border-t mt-2.5 pt-2.5 space-y-1.5" style={{ borderColor: `${conf.color}25` }}>
+                            <div className="text-[9px] text-slate-400 mb-1">
+                              {new Date(insight.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </div>
+                            {tips.map((tip, idx) => (
+                              <div key={idx} className="flex items-start gap-2">
+                                <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white mt-0.5" style={{ background: conf.color }}>{idx + 1}</span>
+                                <span className="text-xs text-slate-700 leading-relaxed">{tip}</span>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            ))}
+                            {insight.serviceApproach && (
+                              <p className="text-[10px] text-slate-400 italic pt-1.5 mt-1.5" style={{ borderTop: `1px solid ${conf.color}15` }}>
+                                💡 {insight.serviceApproach}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </motion.div>
                     );
                   })}
