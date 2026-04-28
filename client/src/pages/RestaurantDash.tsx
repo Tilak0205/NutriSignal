@@ -1227,9 +1227,11 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                               {new Date(insight.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                             </div>
                             {tips.map((tip, idx) => (
-                              <div key={idx} className="flex items-start gap-2">
-                                <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white mt-0.5" style={{ background: conf.color }}>{idx + 1}</span>
-                                <span className="text-xs text-slate-700 leading-relaxed">{tip}</span>
+                              <div key={idx} className="flex items-start gap-2.5 rounded-xl border px-2.5 py-2" style={{ background: `${conf.color}10`, borderColor: `${conf.color}28` }}>
+                                <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white mt-0.5" style={{ background: conf.color }}>
+                                  {idx + 1}
+                                </span>
+                                <span className="text-xs font-medium text-slate-700 leading-relaxed">{tip}</span>
                               </div>
                             ))}
                             {insight.serviceApproach && (
