@@ -50,7 +50,7 @@ export function Login() {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       setAuthToken(data.token, data.user.role);
-      nav(data.user.role === "SUPER_ADMIN" ? "/super-admin" : "/dashboard");
+      nav(data.user.role === "SUPER_ADMIN" ? "/super-admin" : "/dashboard", { replace: true });
     } catch (err: unknown) {
       setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Login failed");
     } finally { setLoading(false); }
@@ -94,7 +94,7 @@ export function Register() {
     try {
       const { data } = await api.post("/auth/register", form);
       setAuthToken(data.token, data.user.role);
-      nav("/dashboard");
+      nav("/dashboard", { replace: true });
     } catch (err: unknown) {
       setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Registration failed");
     } finally { setLoading(false); }

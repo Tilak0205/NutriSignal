@@ -4,7 +4,7 @@ import { Home, Login, Register, BootstrapAdmin } from "./pages/Auth";
 import SuperAdmin from "./pages/SuperAdmin";
 import RestaurantDash from "./pages/RestaurantDash";
 import CustomerFlow from "./pages/CustomerFlow";
-import { Utensils, LogOut } from "lucide-react";
+import { Utensils, LogOut, ChevronLeft } from "lucide-react";
 import type { ReactElement } from "react";
 import "./index.css";
 
@@ -21,17 +21,29 @@ function Navbar() {
   const isAuth = ["/login", "/register", "/bootstrap-super-admin", "/"].includes(loc.pathname);
   if (isAuth) return null;
 
-  const logout = () => { setAuthToken(null); nav("/login"); };
+  const isDashboardPage = loc.pathname === "/dashboard" || loc.pathname === "/super-admin";
+  const logout = () => { setAuthToken(null); nav("/login", { replace: true }); };
 
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-slate-200/60">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 h-[52px]">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
-            <Utensils className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="font-bold text-slate-800 text-sm">NutriSignal</span>
-        </Link>
+        <div className="flex items-center gap-1">
+          {isDashboardPage && (
+            <button
+              onClick={() => nav("/")}
+              className="flex items-center gap-0.5 text-slate-400 hover:text-slate-700 transition-colors mr-1 p-1 rounded-lg hover:bg-slate-100"
+              title="Back to home"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+              <Utensils className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-bold text-slate-800 text-sm">NutriSignal</span>
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           {isLoggedIn && (
             <>

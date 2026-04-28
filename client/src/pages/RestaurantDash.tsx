@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, UtensilsCrossed, QrCode, Brain, ClipboardList,
-  MessageSquare, Plus, Trash2, Eye, EyeOff, Download, ChevronDown, ChevronUp,
+  MessageSquare, Plus, Trash2, Eye, Download, ChevronDown, ChevronUp,
   TrendingUp, ShoppingBag as BagIcon, Star, X, Upload, CheckCircle2,
   AlertCircle, Clock, ArrowRight, Image as ImageIcon, Loader2,
 } from "lucide-react";
@@ -388,6 +388,17 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
   );
 }
 
+const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  "Vegan":          { emoji: "🌱", color: "text-green-700",  bg: "bg-green-50 border-green-200" },
+  "Gluten-Free":    { emoji: "🌾", color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200" },
+  "Vegetarian":     { emoji: "🥬", color: "text-emerald-700",bg: "bg-emerald-50 border-emerald-200" },
+  "Non-Vegetarian": { emoji: "🥩", color: "text-red-700",    bg: "bg-red-50 border-red-200" },
+  "Sweets":         { emoji: "🍬", color: "text-pink-700",   bg: "bg-pink-50 border-pink-200" },
+  "Desserts":       { emoji: "🍰", color: "text-rose-700",   bg: "bg-rose-50 border-rose-200" },
+  "Beverages":      { emoji: "☕", color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
+  "Alcohol":        { emoji: "🍺", color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
+};
+
 /* ---------- Menu ---------- */
 function MenuTab({ categories, load, flash }: { categories: Category[]; load: () => void; flash: (m: string) => void }) {
   const [newCat, setNewCat] = useState("");
@@ -443,129 +454,222 @@ function MenuTab({ categories, load, flash }: { categories: Category[]; load: ()
   const delItem = async (id: string) => { await api.delete(`/restaurant/menu/items/${id}`); load(); flash("Item removed"); };
   const toggleItem = async (id: string, current: boolean) => { await api.put(`/restaurant/menu/items/${id}`, { isAvailable: !current }); load(); };
 
+  const totalItems = categories.reduce((s, c) => s + c.items.length, 0);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3 flex-1">
-          <h2 className="text-lg font-bold text-slate-800 shrink-0">Menu</h2>
-          <div className="flex-1 h-px bg-slate-200" />
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-800">Menu</h2>
+            <div className="flex-1 h-px bg-slate-200 w-16" />
+          </div>
+          <p className="text-sm text-slate-400 mt-0.5">{categories.length} categories · {totalItems} items</p>
         </div>
-        <button onClick={() => setShowAddItem(!showAddItem)} className="ml-3 flex items-center gap-1.5 bg-sky-500 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-sky-600 transition-colors shrink-0">
-          <Plus className="w-4 h-4" /> Add Item
+        <button
+          onClick={() => setShowAddItem(!showAddItem)}
+          className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm ${showAddItem ? "bg-slate-800 text-white" : "bg-sky-500 text-white hover:bg-sky-600"}`}
+        >
+          <Plus className={`w-4 h-4 transition-transform ${showAddItem ? "rotate-45" : ""}`} />
+          {showAddItem ? "Cancel" : "Add Item"}
         </button>
       </div>
 
+      {/* Category quick-jump chips */}
+      {categories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+          {categories.map(cat => {
+            const meta = CATEGORY_META[cat.name] ?? { emoji: "🍽️", color: "text-slate-600", bg: "bg-slate-50 border-slate-200" };
+            return (
+              <button
+                key={cat.id}
+                onClick={() => document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all hover:shadow-sm ${meta.bg} ${meta.color}`}
+              >
+                <span>{meta.emoji}</span>
+                <span>{cat.name}</span>
+                <span className="opacity-60">({cat.items.length})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add Item Form */}
       <AnimatePresence>
         {showAddItem && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 grid gap-3 shadow-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <input value={newItem.name} onChange={(e) => setNewItem((s) => ({ ...s, name: e.target.value }))} placeholder="Item name" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-                <input type="number" min={0} step={0.01} value={newItem.price || ""} onChange={(e) => setNewItem((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="Price" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
+              <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3.5 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-white" />
+                <span className="text-white font-semibold text-sm">New Menu Item</span>
               </div>
-              <input value={newItem.description} onChange={(e) => setNewItem((s) => ({ ...s, description: e.target.value }))} placeholder="Description (optional)" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-              <select value={newItem.categoryId} onChange={(e) => setNewItem((s) => ({ ...s, categoryId: e.target.value }))} className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200">
-                <option value="">Select category...</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-
-              {/* Image upload */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5" /> Photos <span className="text-slate-300">(optional, up to 5)</span>
-                  </span>
-                  <span className={`text-xs font-semibold ${newItem.images.length >= 5 ? "text-amber-500" : "text-slate-400"}`}>{newItem.images.length}/5</span>
+              <div className="p-5 grid gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Item Name *</label>
+                    <input value={newItem.name} onChange={(e) => setNewItem((s) => ({ ...s, name: e.target.value }))} placeholder="e.g. Caesar Salad" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Price *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+                      <input type="number" min={0} step={0.01} value={newItem.price || ""} onChange={(e) => setNewItem((s) => ({ ...s, price: Number(e.target.value) }))} placeholder="0.00" className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
+                    </div>
+                  </div>
                 </div>
-                {newItem.images.length < 5 && (
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50 scale-[1.01]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
-                  >
-                    <Upload className="w-5 h-5 text-slate-400" />
-                    <span className="text-xs text-slate-400">Drop images here or <span className="text-sky-500 font-medium">browse</span></span>
-                    <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-                  </div>
-                )}
-                {newItem.images.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {newItem.images.map((img, idx) => (
-                      <div key={idx} className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-slate-200 group">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setNewItem(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) })); }}
-                          className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              <button onClick={addItem} disabled={savingItem} className="bg-sky-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-sky-600 transition-colors disabled:opacity-70 flex items-center justify-center gap-2">
-                {savingItem ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Item"}
-              </button>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Description</label>
+                  <input value={newItem.description} onChange={(e) => setNewItem((s) => ({ ...s, description: e.target.value }))} placeholder="Brief description (optional)" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Category *</label>
+                  <select value={newItem.categoryId} onChange={(e) => setNewItem((s) => ({ ...s, categoryId: e.target.value }))} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white">
+                    <option value="">Select a category...</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{CATEGORY_META[c.name]?.emoji ?? "🍽️"} {c.name}</option>)}
+                  </select>
+                </div>
+
+                {/* Image upload */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <ImageIcon className="w-3 h-3" /> Photos
+                    </label>
+                    <span className={`text-xs font-bold ${newItem.images.length >= 5 ? "text-amber-500" : "text-slate-400"}`}>{newItem.images.length}/5</span>
+                  </div>
+                  {newItem.images.length < 5 && (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-all ${dragOver ? "border-sky-400 bg-sky-50/60 scale-[1.01]" : "border-slate-200 hover:border-sky-300 hover:bg-sky-50/30"}`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <span className="text-xs text-slate-400 text-center">Drop images here or <span className="text-sky-500 font-semibold">browse</span><br /><span className="text-slate-300">JPG, PNG, WEBP up to 5 photos</span></span>
+                      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+                    </div>
+                  )}
+                  {newItem.images.length > 0 && (
+                    <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                      {newItem.images.map((img, idx) => (
+                        <div key={idx} className="relative shrink-0 w-18 h-18 rounded-xl overflow-hidden border border-slate-200 group">
+                          <img src={img} alt="" className="w-[72px] h-[72px] object-cover" />
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setNewItem(s => ({ ...s, images: s.images.filter((_, i) => i !== idx) })); }}
+                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="w-3 h-3" />
+                          </button>
+                          {idx === 0 && <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold bg-black/50 text-white px-1 rounded">Cover</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={addItem} disabled={savingItem || !newItem.name.trim() || !newItem.categoryId || newItem.price <= 0}
+                  className="bg-sky-500 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-sky-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm">
+                  {savingItem ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><CheckCircle2 className="w-4 h-4" /> Save Item</>}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Add category */}
-      <div className="flex gap-2">
+      {/* Add category row */}
+      <div className="flex gap-2 bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
         <select value={newCat} onChange={(e) => setNewCat(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
-          <option value="">Select a category to add...</option>
-          {availableCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          <option value="">+ Add a new category...</option>
+          {availableCategories.map(cat => <option key={cat} value={cat}>{CATEGORY_META[cat]?.emoji ?? "🍽️"} {cat}</option>)}
         </select>
-        <button onClick={addCat} disabled={!newCat || savingCat} className="bg-slate-100 text-slate-600 text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40 flex items-center gap-1.5 min-w-[130px] justify-center">
-          {savingCat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Add Category"}
+        <button onClick={addCat} disabled={!newCat || savingCat} className="bg-slate-800 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-40 flex items-center gap-1.5 shrink-0">
+          {savingCat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+          Add
         </button>
       </div>
 
-      {availableCategories.length === 0 && <p className="text-xs text-slate-400 text-center py-1">All categories have been added.</p>}
+      {availableCategories.length === 0 && categories.length > 0 && <p className="text-xs text-slate-400 text-center">All 8 categories added ✓</p>}
 
-      {categories.map((cat) => (
-        <div key={cat.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-200">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm text-slate-700">{cat.name}</h3>
-              <span className="text-xs text-slate-400">{cat.items.length} items</span>
+      {categories.length === 0 && (
+        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
+          <UtensilsCrossed className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500 font-medium">No categories yet</p>
+          <p className="text-sm text-slate-400 mt-1">Add a category above to start building your menu</p>
+        </div>
+      )}
+
+      {/* Category sections */}
+      {categories.map((cat) => {
+        const meta = CATEGORY_META[cat.name] ?? { emoji: "🍽️", color: "text-slate-700", bg: "bg-slate-50 border-slate-200" };
+        return (
+          <div key={cat.id} id={`cat-${cat.id}`} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* Category header */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border ${meta.bg}`}>{meta.emoji}</div>
+                <div>
+                  <h3 className={`font-bold text-sm ${meta.color}`}>{cat.name}</h3>
+                  <p className="text-[10px] text-slate-400">{cat.items.length} item{cat.items.length !== 1 ? "s" : ""}</p>
+                </div>
+              </div>
+              <button onClick={() => delCat(cat.id, cat.name)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button onClick={() => delCat(cat.id, cat.name)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-          </div>
-          {cat.items.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 last:border-0">
-              {item.images?.[0] ? (
-                <div className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-slate-100">
-                  <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
-                  {item.images.length > 1 && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <span className="text-white text-[9px] font-bold">+{item.images.length - 1}</span>
+
+            {/* Items */}
+            <div className="divide-y divide-slate-50">
+              {cat.items.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/60 transition-colors">
+                  {item.images?.[0] ? (
+                    <div className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+                      <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                      {item.images.length > 1 && (
+                        <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[8px] font-bold px-1 rounded">+{item.images.length - 1}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="shrink-0 w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-100">
+                      <span className="text-2xl opacity-30">{meta.emoji}</span>
                     </div>
                   )}
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-semibold leading-tight ${item.isAvailable ? "text-slate-800" : "text-slate-400 line-through"}`}>{item.name}</div>
+                    {item.description && <div className="text-xs text-slate-400 mt-0.5 truncate">{item.description}</div>}
+                    <div className="mt-1">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${meta.bg} ${meta.color}`}>${item.price.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => toggleItem(item.id, item.isAvailable)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors ${item.isAvailable ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
+                      {item.isAvailable ? "Live" : "Off"}
+                    </button>
+                    <button onClick={() => delItem(item.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="shrink-0 w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <ImageIcon className="w-4 h-4 text-slate-300" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm font-medium ${item.isAvailable ? "text-slate-800" : "text-slate-400 line-through"}`}>{item.name}</div>
-                <div className="text-xs text-slate-400">${item.price.toFixed(2)}</div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => toggleItem(item.id, item.isAvailable)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
-                  {item.isAvailable ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                </button>
-                <button onClick={() => delItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
+              ))}
             </div>
-          ))}
-          {cat.items.length === 0 && <div className="px-4 py-4 text-sm text-slate-400 text-center">No items yet</div>}
-        </div>
-      ))}
+
+            {cat.items.length === 0 && (
+              <div className="px-4 py-6 text-center">
+                <p className="text-sm text-slate-400">No items yet</p>
+                <button onClick={() => setShowAddItem(true)} className="mt-2 text-xs text-sky-500 hover:text-sky-600 font-medium">
+                  + Add first item
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -643,7 +747,7 @@ function TablesTab({ tables, load, flash }: { tables: Table[]; load: () => void;
 }
 
 /* ---------- Insights ---------- */
-function InsightsTab({ insights, accent, highlightInsightId }: { insights: Insight[]; accent: string; highlightInsightId: string }) {
+function InsightsTab({ insights, highlightInsightId }: { insights: Insight[]; accent?: string; highlightInsightId: string }) {
   const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [sentimentFilter, setSentimentFilter] = useState("all");
@@ -782,15 +886,19 @@ function InsightsTab({ insights, accent, highlightInsightId }: { insights: Insig
 
                       <AnimatePresence>
                         {isExpanded && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.16 }} className="overflow-hidden px-3.5 pb-3.5 space-y-2.5">
-                            <p className="text-xs text-slate-500 italic border-t border-slate-200/60 pt-2.5">{insight.serviceApproach}</p>
-                            <div className="space-y-1">
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.16 }} className="overflow-hidden px-3.5 pb-3.5">
+                            <div className="border-t border-slate-200/60 pt-2.5 space-y-1.5">
                               {tips.map((tip, idx) => (
-                                <div key={idx} className="flex items-start gap-2 text-sm">
-                                  <span className="font-bold mt-0.5 shrink-0" style={{ color: accent }}>→</span>
-                                  <span className="text-slate-600 text-xs">{tip}</span>
+                                <div key={idx} className="flex items-start gap-2.5">
+                                  <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white mt-0.5" style={{ background: conf.glowColor }}>{idx + 1}</span>
+                                  <span className="text-xs text-slate-700 leading-relaxed">{tip}</span>
                                 </div>
                               ))}
+                              {insight.serviceApproach && (
+                                <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100 mt-2">
+                                  💡 {insight.serviceApproach}
+                                </p>
+                              )}
                             </div>
                           </motion.div>
                         )}
