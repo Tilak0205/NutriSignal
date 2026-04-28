@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, ShoppingBag, Users, Pencil, Trash2, Check, X, Plus,
   BarChart3, Table2, UtensilsCrossed, MessageSquare, Copy, Eye, EyeOff,
+  ArrowRight, ChevronDown, Filter,
 } from "lucide-react";
 import { api } from "../lib/api";
 
 type Restaurant = {
   id: string; name: string; isActive: boolean; phone?: string; address?: string;
+  subscriptionPlan?: SubPlan | null; subscriptionPlanId?: string | null;
   users?: { id: string; email: string; name: string; role: string }[];
   _count?: { tables: number; orders: number; items: number };
 };
@@ -16,6 +19,16 @@ type Analytics = {
   restaurants: number; orders: number; activeSessions: number;
   moodDistribution: { sentiment: string; _count: number }[];
   totalTables: number; totalMenuItems: number; totalFeedbacks: number;
+};
+type QStats = { totalResponses: number; questionStats: Record<string, Record<string, number>> };
+
+const QUESTION_LABELS: Record<string, string> = {
+  emotionalState: "What best describes you right now?",
+  dayContext: "How has your day been?",
+  energy: "How charged are you?",
+  occasion: "What's the occasion?",
+  cravings: "What sounds good right now?",
+  dietaryPreference: "Dietary preference?",
 };
 
 function MoodBar({ data, height = 100 }: { data: { sentiment: string; _count: number }[]; height?: number }) {
@@ -27,11 +40,9 @@ function MoodBar({ data, height = 100 }: { data: { sentiment: string; _count: nu
       {data.map(d => (
         <div key={d.sentiment} className="flex flex-col items-center gap-1">
           <span className="text-[10px] font-bold text-slate-500">{d._count}</span>
-          <motion.div
-            initial={{ height: 0 }} animate={{ height: (d._count / max) * (height - 30) }}
+          <motion.div initial={{ height: 0 }} animate={{ height: (d._count / max) * (height - 30) }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="w-8 rounded-t-md" style={{ background: colors[d.sentiment] ?? "#94a3b8" }}
-          />
+            className="w-8 rounded-t-md" style={{ background: colors[d.sentiment] ?? "#94a3b8" }} />
           <span className="text-[9px] text-slate-400 font-medium">{labels[d.sentiment] ?? d.sentiment}</span>
         </div>
       ))}
@@ -39,13 +50,36 @@ function MoodBar({ data, height = 100 }: { data: { sentiment: string; _count: nu
   );
 }
 
+function HBar({ data, accent }: { data: Record<string, number>; accent: string }) {
+  const total = Object.values(data).reduce((s, v) => s + v, 0) || 1;
+  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="space-y-1">
+      {sorted.map(([label, count]) => (
+        <div key={label} className="flex items-center gap-2">
+          <span className="text-[10px] text-slate-500 w-28 truncate text-right capitalize">{label.replace(/-/g, " ")}</span>
+          <div className="flex-1 h-3.5 bg-slate-100 rounded-full overflow-hidden">
+            <motion.div initial={{ width: 0 }} animate={{ width: `${(count / total) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="h-full rounded-full" style={{ background: accent }} />
+          </div>
+          <span className="text-[10px] font-bold text-slate-600 w-8">{count}</span>
+          <span className="text-[9px] text-slate-400 w-10">{((count / total) * 100).toFixed(0)}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
+  const nav = useNavigate();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [subs, setSubs] = useState<SubPlan[]>([]);
+  const [qStats, setQStats] = useState<QStats | null>(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newRestaurant, setNewRestaurant] = useState({ name: "", email: "", ownerName: "", phone: "", address: "" });
+  const [newRestaurant, setNewRestaurant] = useState({ name: "", email: "", ownerName: "", phone: "", address: "", subscriptionPlanId: "" });
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{ email: string; tempPassword: string; ownerName: string; restaurantName: string } | null>(null);
@@ -59,12 +93,19 @@ export default function SuperAdmin() {
   const [editSubId, setEditSubId] = useState<string | null>(null);
   const [editSub, setEditSub] = useState({ name: "", price: 0, maxTables: 20 });
   const [toast, setToast] = useState("");
+  const [planFilter, setPlanFilter] = useState<string>("all");
+  const [expandedQ, setExpandedQ] = useState<string | null>(null);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(""), 2500); };
 
   const load = async () => {
-    const [a, r, s] = await Promise.all([api.get("/admin/analytics"), api.get("/admin/restaurants"), api.get("/admin/subscriptions")]);
-    setAnalytics(a.data); setRestaurants(r.data); setSubs(s.data);
+    const [a, r, s, q] = await Promise.all([
+      api.get("/admin/analytics"),
+      api.get("/admin/restaurants"),
+      api.get("/admin/subscriptions"),
+      api.get("/admin/questionnaire-stats"),
+    ]);
+    setAnalytics(a.data); setRestaurants(r.data); setSubs(s.data); setQStats(q.data);
   };
   useEffect(() => { load(); }, []);
 
@@ -75,9 +116,13 @@ export default function SuperAdmin() {
     if (!ownerName.trim()) { setAddError("Owner name is required"); return; }
     setAddError(""); setAddLoading(true);
     try {
-      const { data } = await api.post("/admin/restaurants", newRestaurant);
+      const payload: Record<string, string> = { name: name.trim(), email: email.trim(), ownerName: ownerName.trim() };
+      if (newRestaurant.phone.trim()) payload.phone = newRestaurant.phone.trim();
+      if (newRestaurant.address.trim()) payload.address = newRestaurant.address.trim();
+      if (newRestaurant.subscriptionPlanId) payload.subscriptionPlanId = newRestaurant.subscriptionPlanId;
+      const { data } = await api.post("/admin/restaurants", payload);
       setCreatedCreds({ ...data.credentials, restaurantName: name.trim() });
-      setNewRestaurant({ name: "", email: "", ownerName: "", phone: "", address: "" });
+      setNewRestaurant({ name: "", email: "", ownerName: "", phone: "", address: "", subscriptionPlanId: "" });
       load(); flash("Restaurant created");
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -97,6 +142,18 @@ export default function SuperAdmin() {
   const saveSubEdit = async (id: string) => { if (!editSub.name.trim()) return; await api.put(`/admin/subscriptions/${id}`, { name: editSub.name.trim(), price: editSub.price, maxTables: editSub.maxTables }); setEditSubId(null); load(); flash("Plan updated"); };
 
   const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); flash("Copied to clipboard"); };
+
+  const filteredRestaurants = restaurants
+    .filter(r => {
+      if (planFilter === "all") return true;
+      if (planFilter === "none") return !r.subscriptionPlanId;
+      return r.subscriptionPlanId === planFilter;
+    })
+    .sort((a, b) => {
+      const aPlan = a.subscriptionPlan?.name ?? "zzz";
+      const bPlan = b.subscriptionPlan?.name ?? "zzz";
+      return aPlan.localeCompare(bPlan);
+    });
 
   const stats = [
     { label: "Restaurants", value: analytics?.restaurants ?? "—", icon: Building2, gradient: "from-sky-500 to-blue-600" },
@@ -126,17 +183,53 @@ export default function SuperAdmin() {
         })}
       </div>
 
-      {/* Mood Distribution Chart */}
-      {analytics?.moodDistribution && analytics.moodDistribution.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 text-slate-400" />
-            <h3 className="font-semibold text-slate-800 text-sm">Mood Distribution</h3>
-            <span className="text-xs text-slate-400">across all restaurants</span>
+      {/* Charts row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Mood Distribution */}
+        {analytics?.moodDistribution && analytics.moodDistribution.length > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 className="w-4 h-4 text-slate-400" />
+              <h3 className="font-semibold text-slate-800 text-sm">Mood Distribution</h3>
+            </div>
+            <MoodBar data={analytics.moodDistribution} height={120} />
           </div>
-          <MoodBar data={analytics.moodDistribution} height={120} />
-        </div>
-      )}
+        )}
+
+        {/* Q&A stats overview */}
+        {qStats && qStats.totalResponses > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <BarChart3 className="w-4 h-4 text-slate-400" />
+              <h3 className="font-semibold text-slate-800 text-sm">Questionnaire Insights</h3>
+            </div>
+            <p className="text-[10px] text-slate-400 mb-3">{qStats.totalResponses} responses across all restaurants</p>
+            <div className="space-y-1.5">
+              {Object.entries(qStats.questionStats).map(([key, answers]) => (
+                <div key={key} className="border border-slate-100 rounded-lg overflow-hidden">
+                  <button onClick={() => setExpandedQ(expandedQ === key ? null : key)}
+                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 transition-colors">
+                    <span className="text-[11px] font-medium text-slate-700 text-left">{QUESTION_LABELS[key] ?? key}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] text-slate-400">{Object.values(answers).reduce((s, v) => s + v, 0)}</span>
+                      <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${expandedQ === key ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {expandedQ === key && (
+                      <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                        <div className="px-3 pb-3">
+                          <HBar data={answers} accent="#0ea5e9" />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Restaurants */}
       <div className="bg-white rounded-xl border border-slate-200">
@@ -147,6 +240,28 @@ export default function SuperAdmin() {
               className="flex items-center gap-1.5 bg-sky-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-sky-600 transition-colors">
               <Plus className={`w-3.5 h-3.5 transition-transform ${showAddForm ? "rotate-45" : ""}`} />
               {showAddForm ? "Close" : "Add Restaurant"}
+            </button>
+          </div>
+
+          {/* Filter by plan */}
+          <div className="flex items-center gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            <Filter className="w-3 h-3 text-slate-400 shrink-0" />
+            <button onClick={() => setPlanFilter("all")}
+              className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors ${planFilter === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+              All ({restaurants.length})
+            </button>
+            {subs.map(plan => {
+              const count = restaurants.filter(r => r.subscriptionPlanId === plan.id).length;
+              return (
+                <button key={plan.id} onClick={() => setPlanFilter(planFilter === plan.id ? "all" : plan.id)}
+                  className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors ${planFilter === plan.id ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                  {plan.name} ({count})
+                </button>
+              );
+            })}
+            <button onClick={() => setPlanFilter(planFilter === "none" ? "all" : "none")}
+              className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors ${planFilter === "none" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+              No Plan ({restaurants.filter(r => !r.subscriptionPlanId).length})
             </button>
           </div>
 
@@ -168,6 +283,11 @@ export default function SuperAdmin() {
                   </div>
                   <input value={newRestaurant.address} onChange={(e) => setNewRestaurant(s => ({ ...s, address: e.target.value }))}
                     placeholder="Address (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                  <select value={newRestaurant.subscriptionPlanId} onChange={(e) => setNewRestaurant(s => ({ ...s, subscriptionPlanId: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
+                    <option value="">Subscription Plan (optional)</option>
+                    {subs.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price}/mo ({p.maxTables} tables)</option>)}
+                  </select>
                   {addError && <p className="text-red-500 text-xs">{addError}</p>}
                   <button onClick={addRestaurant} disabled={addLoading}
                     className="flex items-center gap-1.5 bg-sky-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors disabled:opacity-50">
@@ -178,7 +298,7 @@ export default function SuperAdmin() {
             )}
           </AnimatePresence>
 
-          {/* Generated credentials popup */}
+          {/* Generated credentials */}
           <AnimatePresence>
             {createdCreds && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -224,10 +344,10 @@ export default function SuperAdmin() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {restaurants.map((r) => (
+          {filteredRestaurants.map((r) => (
             <div key={r.id} className="px-4 py-3 hover:bg-slate-50/50 transition-colors">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${r.isActive ? "bg-emerald-500" : "bg-slate-300"}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 ${r.isActive ? "bg-emerald-500" : "bg-slate-300"}`}>
                   {(r.name || "?").charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -240,11 +360,14 @@ export default function SuperAdmin() {
                   ) : (
                     <>
                       <div className="text-sm font-medium text-slate-800 truncate">{r.name || "Unnamed"}</div>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className={`text-[10px] font-bold uppercase ${r.isActive ? "text-emerald-600" : "text-slate-400"}`}>{r.isActive ? "Active" : "Inactive"}</span>
                         {r.users?.[0] && <span className="text-[10px] text-slate-400">· {r.users[0].email}</span>}
+                        {r.subscriptionPlan && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-sky-50 text-sky-600">{r.subscriptionPlan.name}</span>
+                        )}
                         {r._count && (
-                          <span className="text-[10px] text-slate-400">· {r._count.tables} tables · {r._count.orders} orders · {r._count.items} items</span>
+                          <span className="text-[10px] text-slate-400">· {r._count.tables} tables · {r._count.orders} orders</span>
                         )}
                       </div>
                     </>
@@ -252,6 +375,10 @@ export default function SuperAdmin() {
                 </div>
                 {editId !== r.id && (
                   <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => nav(`/super-admin/restaurant/${r.id}`)} title="View analytics"
+                      className="p-1.5 rounded-lg hover:bg-sky-50 text-slate-400 hover:text-sky-600 transition-colors">
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                     <button onClick={() => { setEditId(r.id); setEditName(r.name); }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
                     <button onClick={() => toggleActive(r.id, r.isActive)} className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors ${r.isActive ? "bg-red-50 text-red-500 hover:bg-red-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}>
                       {r.isActive ? "Deactivate" : "Activate"}
@@ -262,7 +389,7 @@ export default function SuperAdmin() {
               </div>
             </div>
           ))}
-          {!restaurants.length && <div className="px-4 py-8 text-center text-sm text-slate-400">No restaurants yet</div>}
+          {!filteredRestaurants.length && <div className="px-4 py-8 text-center text-sm text-slate-400">{planFilter === "all" ? "No restaurants yet" : "No restaurants with this plan"}</div>}
         </div>
       </div>
 
@@ -301,7 +428,10 @@ export default function SuperAdmin() {
                 </div>
               ) : (
                 <>
-                  <div className="font-semibold text-slate-800">{s.name}</div>
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-slate-800">{s.name}</div>
+                    <span className="text-[10px] font-medium text-slate-400">{restaurants.filter(r => r.subscriptionPlanId === s.id).length} restaurants</span>
+                  </div>
                   <div className="text-2xl font-bold text-sky-600 my-1">£{s.price}<span className="text-xs text-slate-400 font-normal">/mo</span></div>
                   <div className="text-xs text-slate-400 mb-3"><Table2 className="w-3 h-3 inline mr-1" />{s.maxTables} tables</div>
                   <button onClick={() => { setEditSubId(s.id); setEditSub({ name: s.name, price: s.price, maxTables: s.maxTables }); }} className="w-full text-xs font-medium text-slate-500 bg-slate-50 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">Edit Plan</button>

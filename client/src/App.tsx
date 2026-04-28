@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate 
 import { initAuth, setAuthToken, getRole } from "./lib/api";
 import { Home, Login, Register, BootstrapAdmin } from "./pages/Auth";
 import SuperAdmin from "./pages/SuperAdmin";
+import AdminRestaurantDetail from "./pages/AdminRestaurantDetail";
 import RestaurantDash from "./pages/RestaurantDash";
 import CustomerFlow from "./pages/CustomerFlow";
 import { Utensils, LogOut, ChevronLeft } from "lucide-react";
@@ -90,6 +91,7 @@ function WithNavbar() {
         <Route path="/bootstrap-super-admin" element={<BootstrapAdmin />} />
         <Route path="/dashboard" element={<RequireRole allow={["OWNER", "MANAGER", "STAFF"]}><RestaurantDash /></RequireRole>} />
         <Route path="/super-admin" element={<RequireRole allow={["SUPER_ADMIN"]}><SuperAdmin /></RequireRole>} />
+        <Route path="/super-admin/restaurant/:id" element={<RequireRole allow={["SUPER_ADMIN"]}><AdminRestaurantDetail /></RequireRole>} />
       </Routes>
     </>
   );
