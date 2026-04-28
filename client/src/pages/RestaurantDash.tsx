@@ -1226,6 +1226,14 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                             <div className={`text-[10px] font-medium mb-1 ${conf.timeMetaClass}`}>
                               {new Date(insight.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                             </div>
+                            {insight.serviceApproach && (
+                              <div className="rounded-xl border px-2.5 py-2.5" style={{ background: `${conf.color}12`, borderColor: `${conf.color}30` }}>
+                                <p className="text-[10px] uppercase tracking-wide font-bold mb-1" style={{ color: conf.color }}>Tip</p>
+                                <p className="text-xs text-slate-700 italic leading-relaxed">
+                                  💡 {insight.serviceApproach}
+                                </p>
+                              </div>
+                            )}
                             {tips.map((tip, idx) => (
                               <div key={idx} className="flex items-start gap-2.5 rounded-xl border px-2.5 py-2" style={{ background: `${conf.color}10`, borderColor: `${conf.color}28` }}>
                                 <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white mt-0.5" style={{ background: conf.color }}>
@@ -1234,11 +1242,6 @@ function InsightsTab({ insights, highlightInsightId, qStats }: { insights: Insig
                                 <span className="text-xs font-medium text-slate-700 leading-relaxed">{tip}</span>
                               </div>
                             ))}
-                            {insight.serviceApproach && (
-                              <p className="text-[10px] text-slate-400 italic pt-1.5 mt-1.5" style={{ borderTop: `1px solid ${conf.color}15` }}>
-                                💡 {insight.serviceApproach}
-                              </p>
-                            )}
                           </div>
                         </div>
                       </motion.div>
