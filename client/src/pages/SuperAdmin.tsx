@@ -164,18 +164,18 @@ export default function SuperAdmin() {
     .sort((a, b) => (a.subscriptionPlan?.name ?? "zzz").localeCompare(b.subscriptionPlan?.name ?? "zzz"));
 
   const statCards = [
-    { label: "Restaurants", value: analytics?.restaurants ?? "—", icon: Building2, gradient: "from-sky-500 to-blue-600" },
-    { label: "Total Orders", value: analytics?.orders ?? "—", icon: ShoppingBag, gradient: "from-emerald-500 to-green-600" },
-    { label: "Active Sessions", value: analytics?.activeSessions ?? "—", icon: Users, gradient: "from-purple-500 to-violet-600" },
-    { label: "Tables", value: analytics?.totalTables ?? "—", icon: Table2, gradient: "from-amber-500 to-orange-600" },
-    { label: "Menu Items", value: analytics?.totalMenuItems ?? "—", icon: UtensilsCrossed, gradient: "from-pink-500 to-rose-600" },
-    { label: "Feedbacks", value: analytics?.totalFeedbacks ?? "—", icon: MessageSquare, gradient: "from-teal-500 to-cyan-600" },
+    { label: "Restaurants", value: analytics?.restaurants ?? "—", icon: Building2, gradient: "from-emerald-500 to-green-600" },
+    { label: "Total Orders", value: analytics?.orders ?? "—", icon: ShoppingBag, gradient: "from-green-500 to-emerald-600" },
+    { label: "Active Sessions", value: analytics?.activeSessions ?? "—", icon: Users, gradient: "from-lime-500 to-green-600" },
+    { label: "Tables", value: analytics?.totalTables ?? "—", icon: Table2, gradient: "from-emerald-400 to-green-500" },
+    { label: "Menu Items", value: analytics?.totalMenuItems ?? "—", icon: UtensilsCrossed, gradient: "from-green-400 to-emerald-500" },
+    { label: "Feedbacks", value: analytics?.totalFeedbacks ?? "—", icon: MessageSquare, gradient: "from-teal-500 to-emerald-600" },
   ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] gap-3">
-        <Loader2 className="w-5 h-5 animate-spin text-sky-500" />
+        <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
         <span className="text-sm text-slate-400">Loading admin dashboard...</span>
       </div>
     );
@@ -198,7 +198,7 @@ export default function SuperAdmin() {
             <button key={item.key} onClick={() => switchTab(item.key)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 active
-                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
                   : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               }`}>
               <Icon className="w-[18px] h-[18px]" />
@@ -302,7 +302,7 @@ export default function SuperAdmin() {
                     {analytics?.moodDistribution && analytics.moodDistribution.length > 0 && (
                       <div className="bg-white rounded-2xl border border-slate-200 p-5">
                         <div className="flex items-center gap-2 mb-4">
-                          <BarChart3 className="w-4 h-4 text-sky-500" />
+                          <BarChart3 className="w-4 h-4 text-emerald-600" />
                           <h3 className="font-semibold text-slate-800 text-sm">Mood Distribution</h3>
                           <span className="text-[10px] text-slate-400 ml-auto">All restaurants</span>
                         </div>
@@ -312,12 +312,12 @@ export default function SuperAdmin() {
 
                     <div className="bg-white rounded-2xl border border-slate-200 p-5">
                       <div className="flex items-center gap-2 mb-4">
-                        <Building2 className="w-4 h-4 text-sky-500" />
+                        <Building2 className="w-4 h-4 text-emerald-600" />
                         <h3 className="font-semibold text-slate-800 text-sm">Quick Actions</h3>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <button onClick={() => { switchTab("restaurants"); setTimeout(() => setShowAddForm(true), 200); }}
-                          className="flex items-center gap-2 p-3 rounded-xl bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors">
+                          className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors">
                           <Plus className="w-4 h-4" /> Add Restaurant
                         </button>
                         <button onClick={() => switchTab("plans")}
@@ -325,11 +325,11 @@ export default function SuperAdmin() {
                           <CreditCard className="w-4 h-4" /> Manage Plans
                         </button>
                         <button onClick={() => switchTab("restaurants")}
-                          className="flex items-center gap-2 p-3 rounded-xl bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-colors">
+                          className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors">
                           <Building2 className="w-4 h-4" /> All Restaurants
                         </button>
                         <button onClick={() => switchTab("insights")}
-                          className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 transition-colors">
+                          className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors">
                           <BarChart3 className="w-4 h-4" /> View Insights
                         </button>
                       </div>
@@ -340,7 +340,7 @@ export default function SuperAdmin() {
                     <div className="bg-white rounded-2xl border border-slate-200 p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-slate-800 text-sm">Recent Restaurants</h3>
-                        <button onClick={() => switchTab("restaurants")} className="text-xs text-sky-600 font-medium hover:text-sky-700 transition-colors">View all &rarr;</button>
+                        <button onClick={() => switchTab("restaurants")} className="text-xs text-emerald-600 font-medium hover:text-emerald-700 transition-colors">View all &rarr;</button>
                       </div>
                       <div className="space-y-1">
                         {restaurants.slice(0, 5).map(r => (
@@ -352,7 +352,7 @@ export default function SuperAdmin() {
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-slate-800 truncate">{r.name}</div>
                               <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                                {r.subscriptionPlan && <span className="font-medium text-sky-500">{r.subscriptionPlan.name}</span>}
+                                {r.subscriptionPlan && <span className="font-medium text-emerald-600">{r.subscriptionPlan.name}</span>}
                                 {r._count && <span>{r._count.orders} orders · {r._count.tables} tables</span>}
                               </div>
                             </div>
@@ -371,7 +371,7 @@ export default function SuperAdmin() {
                   <div className="flex items-center justify-between">
                     <div />
                     <button onClick={() => { setShowAddForm(!showAddForm); setCreatedCreds(null); }}
-                      className="flex items-center gap-1.5 bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-sky-600 transition-colors shadow-sm">
+                      className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">
                       <Plus className={`w-3.5 h-3.5 transition-transform ${showAddForm ? "rotate-45" : ""}`} />
                       {showAddForm ? "Close" : "Add Restaurant"}
                     </button>
@@ -404,7 +404,7 @@ export default function SuperAdmin() {
                     {showAddForm && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                          <div className="px-5 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 flex items-center gap-2">
+                          <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-green-600 flex items-center gap-2">
                             <Plus className="w-4 h-4 text-white" />
                             <span className="text-white font-semibold text-sm">New Restaurant</span>
                           </div>
@@ -413,40 +413,40 @@ export default function SuperAdmin() {
                               <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Restaurant Name *</label>
                                 <input value={newRestaurant.name} onChange={(e) => { setNewRestaurant(s => ({ ...s, name: e.target.value })); setAddError(""); }}
-                                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Owner Name *</label>
                                 <input value={newRestaurant.ownerName} onChange={(e) => { setNewRestaurant(s => ({ ...s, ownerName: e.target.value })); setAddError(""); }}
-                                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Owner Email *</label>
                                 <input value={newRestaurant.email} onChange={(e) => { setNewRestaurant(s => ({ ...s, email: e.target.value })); setAddError(""); }}
-                                  type="email" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                                  type="email" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Phone</label>
                                 <input value={newRestaurant.phone} onChange={(e) => setNewRestaurant(s => ({ ...s, phone: e.target.value }))}
-                                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                               </div>
                             </div>
                             <div>
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Address</label>
                               <input value={newRestaurant.address} onChange={(e) => setNewRestaurant(s => ({ ...s, address: e.target.value }))}
-                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                             </div>
                             <div>
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Subscription Plan</label>
                               <select value={newRestaurant.subscriptionPlanId} onChange={(e) => setNewRestaurant(s => ({ ...s, subscriptionPlanId: e.target.value }))}
-                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white">
+                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white">
                                 <option value="">No plan</option>
                                 {subs.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price}/mo ({p.maxTables} tables)</option>)}
                               </select>
                             </div>
                             {addError && <p className="text-red-500 text-xs">{addError}</p>}
                             <button onClick={addRestaurant} disabled={addLoading}
-                              className="flex items-center gap-2 bg-sky-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-sky-600 transition-colors disabled:opacity-50">
+                              className="flex items-center gap-2 bg-emerald-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50">
                               {addLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><Plus className="w-4 h-4" /> Create Restaurant</>}
                             </button>
                           </div>
@@ -490,13 +490,13 @@ export default function SuperAdmin() {
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className={`text-[10px] font-bold uppercase ${r.isActive ? "text-emerald-600" : "text-slate-400"}`}>{r.isActive ? "Active" : "Inactive"}</span>
                             {r.users?.[0] && <span className="text-[10px] text-slate-400">· {r.users[0].email}</span>}
-                            {r.subscriptionPlan && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-600">{r.subscriptionPlan.name}</span>}
+                            {r.subscriptionPlan && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{r.subscriptionPlan.name}</span>}
                             {r._count && <span className="text-[10px] text-slate-400">· {r._count.tables} tables · {r._count.orders} orders · {r._count.items} items</span>}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                           <button onClick={() => nav(`/super-admin/restaurant/${r.id}?edit=true`)} title="Edit Restaurant"
-                            className="p-2 rounded-lg hover:bg-sky-50 text-slate-400 hover:text-sky-600 transition-colors">
+                            className="p-2 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-700 transition-colors">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => toggleActive(r.id, r.isActive)}
@@ -525,20 +525,20 @@ export default function SuperAdmin() {
                       <div className="flex-1 min-w-[160px]">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Plan Name</label>
                         <input value={newSub.name} onChange={(e) => { setNewSub((s) => ({ ...s, name: e.target.value })); setSubError(""); }}
-                          placeholder="e.g. AI Basic" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                          placeholder="e.g. AI Basic" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                       </div>
                       <div className="w-28">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">£ Price</label>
                         <input type="number" value={newSub.price || ""} onChange={(e) => setNewSub((s) => ({ ...s, price: Number(e.target.value) }))}
-                          placeholder="0" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                          placeholder="0" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                       </div>
                       <div className="w-28">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Tables</label>
                         <input type="number" value={newSub.maxTables} onChange={(e) => setNewSub((s) => ({ ...s, maxTables: Number(e.target.value) }))}
-                          placeholder="20" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 bg-white" />
+                          placeholder="20" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-white" />
                       </div>
                       <button onClick={addSub}
-                        className="flex items-center gap-1.5 bg-sky-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-sky-600 transition-colors">
+                        className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors">
                         <Plus className="w-4 h-4" /> Add
                       </button>
                     </div>
@@ -555,20 +555,20 @@ export default function SuperAdmin() {
                             <div className="space-y-2.5">
                               <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Name</label>
-                                <input value={editSub.name} onChange={(e) => setEditSub((p) => ({ ...p, name: e.target.value }))} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                                <input value={editSub.name} onChange={(e) => setEditSub((p) => ({ ...p, name: e.target.value }))} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                               </div>
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
                                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Price (£)</label>
-                                  <input type="number" value={editSub.price} onChange={(e) => setEditSub((p) => ({ ...p, price: Number(e.target.value) }))} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                                  <input type="number" value={editSub.price} onChange={(e) => setEditSub((p) => ({ ...p, price: Number(e.target.value) }))} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                                 </div>
                                 <div>
                                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Tables</label>
-                                  <input type="number" value={editSub.maxTables} onChange={(e) => setEditSub((p) => ({ ...p, maxTables: Number(e.target.value) }))} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
+                                  <input type="number" value={editSub.maxTables} onChange={(e) => setEditSub((p) => ({ ...p, maxTables: Number(e.target.value) }))} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                                 </div>
                               </div>
                               <div className="flex gap-2">
-                                <button onClick={() => saveSubEdit(s.id)} className="flex-1 bg-sky-500 text-white text-xs font-semibold py-2 rounded-xl hover:bg-sky-600">Save</button>
+                                <button onClick={() => saveSubEdit(s.id)} className="flex-1 bg-emerald-600 text-white text-xs font-semibold py-2 rounded-xl hover:bg-emerald-700">Save</button>
                                 <button onClick={() => setEditSubId(null)} className="flex-1 bg-slate-100 text-slate-500 text-xs font-semibold py-2 rounded-xl hover:bg-slate-200">Cancel</button>
                               </div>
                             </div>
@@ -576,9 +576,9 @@ export default function SuperAdmin() {
                             <>
                               <div className="flex items-center justify-between mb-1">
                                 <h4 className="font-bold text-slate-800">{s.name}</h4>
-                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-50 text-sky-600">{planCount} restaurant{planCount !== 1 ? "s" : ""}</span>
+                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{planCount} restaurant{planCount !== 1 ? "s" : ""}</span>
                               </div>
-                              <div className="text-3xl font-extrabold text-sky-600 my-2">£{s.price}<span className="text-sm text-slate-400 font-normal">/mo</span></div>
+                              <div className="text-3xl font-extrabold text-emerald-700 my-2">£{s.price}<span className="text-sm text-slate-400 font-normal">/mo</span></div>
                               <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-4">
                                 <Table2 className="w-4 h-4 text-slate-400" />
                                 <span>{s.maxTables} tables</span>
@@ -604,7 +604,7 @@ export default function SuperAdmin() {
                     {analytics?.moodDistribution && analytics.moodDistribution.length > 0 && (
                       <div className="bg-white rounded-2xl border border-slate-200 p-5">
                         <div className="flex items-center gap-2 mb-4">
-                          <BarChart3 className="w-4 h-4 text-sky-500" />
+                          <BarChart3 className="w-4 h-4 text-emerald-600" />
                           <h3 className="font-semibold text-slate-800 text-sm">Mood Distribution</h3>
                         </div>
                         <MoodBar data={analytics.moodDistribution} height={140} />
@@ -625,7 +625,7 @@ export default function SuperAdmin() {
                               <div key={key} className="text-center p-2.5 rounded-xl bg-slate-50">
                                 <div className="text-lg font-bold text-slate-800">{total}</div>
                                 <div className="text-[9px] text-slate-400 truncate">{label.split(" ").slice(0, 3).join(" ")}</div>
-                                {top && <div className="text-[9px] text-sky-600 font-medium mt-0.5 truncate capitalize">{top[0].replace(/-/g, " ")}</div>}
+                                {top && <div className="text-[9px] text-emerald-700 font-medium mt-0.5 truncate capitalize">{top[0].replace(/-/g, " ")}</div>}
                               </div>
                             );
                           })}
@@ -657,7 +657,7 @@ export default function SuperAdmin() {
                                 {expandedQ === key && (
                                   <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
                                     <div className="px-4 pb-4">
-                                      <HBar data={answers} accent="#0ea5e9" />
+                                      <HBar data={answers} accent="#16a34a" />
                                     </div>
                                   </motion.div>
                                 )}
