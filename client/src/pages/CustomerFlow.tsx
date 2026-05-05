@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 
 type MenuItem = { id: string; name: string; price: number; description?: string; isAvailable?: boolean; images?: string[] };
 type Category = { id: string; name: string; items: MenuItem[] };
-type Restaurant = { id: string; name: string; logo?: string; brandPrimaryColor: string };
+type Restaurant = { id: string; name: string; logo?: string | null; brandPrimaryColor: string; brandSecondaryColor?: string };
 type Lightbox = { images: string[]; idx: number };
 
 const QUESTIONS = [
@@ -99,6 +99,7 @@ export default function CustomerFlow() {
   const [lightbox, setLightbox] = useState<Lightbox | null>(null);
 
   const accent = restaurant?.brandPrimaryColor ?? "#0ea5e9";
+  const accent2 = restaurant?.brandSecondaryColor ?? accent;
 
   useEffect(() => {
     (async () => {
@@ -195,8 +196,15 @@ export default function CustomerFlow() {
       <div className="sticky top-0 z-40 backdrop-blur-lg bg-white/80 border-b border-slate-200/60">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ background: accent }}>
-              {restaurant?.name?.charAt(0) ?? "N"}
+            <div
+              className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm ring-1 ring-slate-200/60"
+              style={{ background: restaurant?.logo ? "#fff" : accent }}
+            >
+              {restaurant?.logo ? (
+                <img src={restaurant.logo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                restaurant?.name?.charAt(0) ?? "N"
+              )}
             </div>
             <div>
               <div className="font-semibold text-slate-800 text-sm leading-tight">{restaurant?.name}</div>
@@ -218,10 +226,18 @@ export default function CustomerFlow() {
             <motion.div key="welcome" {...pageVariants} className="flex flex-col items-center text-center pt-12">
               <motion.div
                 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }}
-                className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-3xl font-bold mb-6 shadow-lg"
-                style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+                className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl ring-4 ring-white overflow-hidden"
+                style={
+                  restaurant?.logo
+                    ? { background: "#fff" }
+                    : { background: `linear-gradient(135deg, ${accent}, ${accent2})` }
+                }
               >
-                <Utensils className="w-10 h-10" />
+                {restaurant?.logo ? (
+                  <img src={restaurant.logo} alt="" className="w-full h-full object-contain p-3" />
+                ) : (
+                  <Utensils className="w-11 h-11 text-white" />
+                )}
               </motion.div>
               <h1 className="text-2xl font-bold text-slate-800 mb-2">Welcome to {restaurant?.name}</h1>
               <p className="text-slate-500 mb-8 max-w-xs">Answer a few quick questions so we can make your visit perfect.</p>

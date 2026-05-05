@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, UtensilsCrossed, QrCode, Brain, ClipboardList,
   MessageSquare, Plus, Trash2, Eye, Download, ChevronDown, ChevronUp,
   TrendingUp, ShoppingBag as BagIcon, Star, X, Upload, CheckCircle2,
   AlertCircle, Clock, ArrowRight, Image as ImageIcon, Loader2, Pencil, Save,
-  ChevronLeft, ChevronRight, Power,
+  ChevronLeft, ChevronRight, Power, CircleUserRound, Sparkles, Lock, Palette,
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -71,10 +71,21 @@ type Table = { id: string; tableNumber: number };
 type Insight = { id: string; sentiment: string; keyInsights: string[]; interactionTips: string[]; serviceApproach: string; createdAt: string; table: { tableNumber: number } };
 type OrderData = { id: string; status: string; totalAmount: number; createdAt: string; notes?: string; table: { tableNumber: number }; items: { quantity: number; specialInstructions?: string; menuItem: { name: string; price: number } }[] };
 type FeedbackData = { id: string; rating: number; comment?: string; createdAt: string };
-type Tab = "overview" | "menu" | "tables" | "insights" | "orders" | "feedback";
+type Tab = "overview" | "profile" | "menu" | "tables" | "insights" | "orders" | "feedback";
+
+type ProfileShape = {
+  name: string;
+  logo: string;
+  brandPrimaryColor: string;
+  brandSecondaryColor: string;
+  description: string;
+  address: string;
+  phone: string;
+};
 
 const NAV: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "profile", label: "Profile", icon: CircleUserRound },
   { key: "menu", label: "Menu", icon: UtensilsCrossed },
   { key: "tables", label: "Tables & QR", icon: QrCode },
   { key: "insights", label: "Insights", icon: Brain },
@@ -86,7 +97,7 @@ export default function RestaurantDash() {
   const [tab, setTab] = useState<Tab>("overview");
   const [highlightInsightId, setHighlightInsightId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState({ name: "", brandPrimaryColor: "#0ea5e9", brandSecondaryColor: "#22c55e", description: "", address: "", phone: "" });
+  const [profile, setProfile] = useState<ProfileShape>({ name: "", logo: "", brandPrimaryColor: "#0ea5e9", brandSecondaryColor: "#22c55e", description: "", address: "", phone: "" });
   const [categories, setCategories] = useState<Category[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -103,7 +114,15 @@ export default function RestaurantDash() {
       api.get("/restaurant/mood-insights"), api.get("/restaurant/orders"), api.get("/restaurant/feedbacks"),
       api.get("/restaurant/questionnaire-stats"),
     ]);
-    setProfile({ name: p.data?.name ?? "", brandPrimaryColor: p.data?.brandPrimaryColor ?? "#0ea5e9", brandSecondaryColor: p.data?.brandSecondaryColor ?? "#22c55e", description: p.data?.description ?? "", address: p.data?.address ?? "", phone: p.data?.phone ?? "" });
+    setProfile({
+      name: p.data?.name ?? "",
+      logo: typeof p.data?.logo === "string" ? p.data.logo : "",
+      brandPrimaryColor: p.data?.brandPrimaryColor ?? "#0ea5e9",
+      brandSecondaryColor: p.data?.brandSecondaryColor ?? "#22c55e",
+      description: p.data?.description ?? "",
+      address: p.data?.address ?? "",
+      phone: p.data?.phone ?? "",
+    });
     setCategories(c.data); setTables(t.data); setInsights(m.data); setOrders(o.data); setFeedbacks(f.data); setQStats(q.data);
     setLoading(false);
   };
@@ -123,8 +142,12 @@ export default function RestaurantDash() {
       <aside className="w-56 shrink-0 bg-white border-r border-slate-200 hidden md:flex flex-col py-4">
         <div className="px-4 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm" style={{ background: accent }}>
-              {profile.name.charAt(0).toUpperCase() || "R"}
+            <div className="w-9 h-9 rounded-xl shrink-0 shadow-sm overflow-hidden bg-slate-100 flex items-center justify-center" style={profile.logo ? {} : { background: accent }}>
+              {profile.logo ? (
+                <img src={profile.logo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-sm">{profile.name.charAt(0).toUpperCase() || "R"}</span>
+              )}
             </div>
             <div className="min-w-0">
               <div className="text-sm font-bold text-slate-800 truncate">{profile.name || "Restaurant"}</div>
@@ -176,7 +199,8 @@ export default function RestaurantDash() {
         ) : (
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setProfile={setProfile} load={load} flash={flash} setTab={setTab} goToInsight={goToInsight} />}
+              {tab === "overview" && <OverviewTab accent={accent} orders={orders} insights={insights} totalItems={totalItems} tables={tables} avgRating={avgRating} pendingOrders={pendingOrders} profile={profile} setTab={setTab} goToInsight={goToInsight} />}
+              {tab === "profile" && <ProfileTab accent={accent} profile={profile} setProfile={setProfile} load={load} flash={flash} />}
               {tab === "menu" && <MenuTab categories={categories} load={load} flash={flash} accent={accent} />}
               {tab === "tables" && <TablesTab tables={tables} load={load} flash={flash} />}
               {tab === "insights" && <InsightsTab insights={insights} accent={accent} highlightInsightId={highlightInsightId} qStats={qStats} />}
@@ -200,39 +224,12 @@ export default function RestaurantDash() {
 }
 
 /* ---------- Overview ---------- */
-function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, pendingOrders, profile, setProfile, load, flash, setTab, goToInsight }: {
+function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, pendingOrders, profile, setTab, goToInsight }: {
   accent: string; orders: OrderData[]; insights: Insight[]; totalItems: number; tables: Table[];
   avgRating: number; pendingOrders: number;
-  profile: { name: string; brandPrimaryColor: string; brandSecondaryColor: string; description: string; address: string; phone: string };
-  setProfile: (fn: (s: typeof profile) => typeof profile) => void; load: () => void; flash: (m: string) => void;
+  profile: ProfileShape;
   setTab: (tab: Tab) => void; goToInsight: (id: string) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [showPwChange, setShowPwChange] = useState(false);
-  const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirm: "" });
-  const [pwSaving, setPwSaving] = useState(false);
-  const [pwError, setPwError] = useState("");
-
-  const save = async () => {
-    setSaving(true);
-    try { await api.put("/restaurant/profile", profile); load(); flash("Profile saved"); setEditing(false); }
-    finally { setSaving(false); }
-  };
-
-  const changePassword = async () => {
-    if (pwForm.newPassword.length < 6) { setPwError("New password must be at least 6 characters"); return; }
-    if (pwForm.newPassword !== pwForm.confirm) { setPwError("Passwords don't match"); return; }
-    setPwError(""); setPwSaving(true);
-    try {
-      await api.put("/restaurant/change-password", { currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword });
-      flash("Password updated"); setShowPwChange(false); setPwForm({ currentPassword: "", newPassword: "", confirm: "" });
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setPwError(msg ?? "Failed to change password");
-    } finally { setPwSaving(false); }
-  };
-
   const sentimentBadge: Record<string, string> = { positive: "bg-emerald-100 text-emerald-700", negative: "bg-red-100 text-red-700", neutral: "bg-amber-100 text-amber-700" };
   const sentimentBorder: Record<string, string> = { positive: "border-l-emerald-400", negative: "border-l-red-400", neutral: "border-l-amber-400" };
 
@@ -257,15 +254,26 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
       {/* Gradient banner */}
       <div className="rounded-2xl p-5 text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}bb)` }}>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-xl font-bold shrink-0">
-            {profile.name.charAt(0).toUpperCase() || "R"}
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-xl font-bold shrink-0 overflow-hidden ring-2 ring-white/30">
+            {profile.logo ? (
+              <img src={profile.logo} alt="" className="w-full h-full object-cover" />
+            ) : (
+              profile.name.charAt(0).toUpperCase() || "R"
+            )}
           </div>
-          <div>
-            <div className="text-lg font-bold leading-tight">{profile.name || "Your Restaurant"}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-bold leading-tight truncate">{profile.name || "Your Restaurant"}</div>
             <div className="text-sm text-white/70 mt-0.5">
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setTab("profile")}
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+          >
+            Profile
+          </button>
           {pendingOrders > 0 && (
             <div className="ml-auto bg-white/20 rounded-lg px-3 py-1.5 text-center">
               <div className="text-lg font-bold">{pendingOrders}</div>
@@ -365,72 +373,357 @@ function OverviewTab({ accent, orders, insights, totalItems, tables, avgRating, 
         </div>
       )}
 
-      {/* Profile card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-slate-800">Restaurant Profile</h3>
-          <button
-            onClick={() => editing ? save() : setEditing(true)}
-            disabled={saving}
-            className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors min-w-[60px] flex items-center justify-center gap-1.5"
-            style={editing ? { background: accent, color: "white" } : { background: "#f1f5f9", color: "#475569" }}
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : editing ? "Save" : "Edit"}
-          </button>
+      {/* Quick link: full profile editing lives on Profile tab */}
+      <button
+        type="button"
+        onClick={() => setTab("profile")}
+        className="w-full text-left rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-3 hover:border-sky-200 hover:shadow-sm transition-all group"
+      >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-sky-50 text-sky-600 shrink-0">
+          <Sparkles className="w-5 h-5" />
         </div>
-        {editing ? (
-          <div className="grid gap-3">
-            <input value={profile.name} onChange={(e) => setProfile((s) => ({ ...s, name: e.target.value }))} placeholder="Restaurant name" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-            <textarea value={profile.description} onChange={(e) => setProfile((s) => ({ ...s, description: e.target.value }))} placeholder="Description" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 h-20 resize-none" />
-            <div className="grid grid-cols-2 gap-3">
-              <input value={profile.address} onChange={(e) => setProfile((s) => ({ ...s, address: e.target.value }))} placeholder="Address" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-              <input value={profile.phone} onChange={(e) => setProfile((s) => ({ ...s, phone: e.target.value }))} placeholder="Phone" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center gap-2"><input type="color" value={profile.brandPrimaryColor} onChange={(e) => setProfile((s) => ({ ...s, brandPrimaryColor: e.target.value }))} className="w-8 h-8 rounded cursor-pointer border-0 p-0" /><span className="text-xs text-slate-400">Primary</span></div>
-              <div className="flex items-center gap-2"><input type="color" value={profile.brandSecondaryColor} onChange={(e) => setProfile((s) => ({ ...s, brandSecondaryColor: e.target.value }))} className="w-8 h-8 rounded cursor-pointer border-0 p-0" /><span className="text-xs text-slate-400">Secondary</span></div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-1.5 text-sm text-slate-600">
-            <div className="font-medium text-slate-800">{profile.name}</div>
-            {profile.description && <p className="text-slate-400">{profile.description}</p>}
-            {profile.address && <p>📍 {profile.address}</p>}
-            {profile.phone && <p>📞 {profile.phone}</p>}
-            <div className="flex items-center gap-3 pt-1">
-              <div className="w-5 h-5 rounded" style={{ background: profile.brandPrimaryColor }} />
-              <div className="w-5 h-5 rounded" style={{ background: profile.brandSecondaryColor }} />
-            </div>
-          </div>
-        )}
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-slate-800 text-sm">Restaurant profile &amp; branding</div>
+          <p className="text-xs text-slate-400 mt-0.5">Edit details, colours, logo, and password — shown to guests after they scan your table QR.</p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-sky-500 shrink-0" />
+      </button>
+    </div>
+  );
+}
+
+/* ---------- Profile (restaurant identity) ---------- */
+function ProfileTab({
+  accent,
+  profile,
+  setProfile,
+  load,
+  flash,
+}: {
+  accent: string;
+  profile: ProfileShape;
+  setProfile: Dispatch<SetStateAction<ProfileShape>>;
+  load: () => void;
+  flash: (m: string) => void;
+}) {
+  const [draft, setDraft] = useState<ProfileShape>(profile);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [logoDrag, setLogoDrag] = useState(false);
+  const [showPwChange, setShowPwChange] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirm: "" });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState("");
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDraft(profile);
+    setDirty(false);
+  }, [profile]);
+
+  const markDirty = (next: ProfileShape) => {
+    setDraft(next);
+    setDirty(true);
+  };
+
+  const readLogoFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      flash("Please choose an image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result.length > 4_400_000) {
+        flash("Image is too large — try under ~2MB");
+        return;
+      }
+      setDraft((d) => ({ ...d, logo: result }));
+      setDirty(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveProfile = async () => {
+    if (!draft.name.trim()) {
+      flash("Restaurant name is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        name: draft.name.trim(),
+        description: draft.description || null,
+        address: draft.address || null,
+        phone: draft.phone || null,
+        brandPrimaryColor: draft.brandPrimaryColor,
+        brandSecondaryColor: draft.brandSecondaryColor,
+        logo: draft.logo || null,
+      };
+      await api.put("/restaurant/profile", payload);
+      setProfile(draft);
+      await load();
+      flash("Profile saved");
+      setDirty(false);
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      flash(msg ?? "Could not save profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (pwForm.newPassword.length < 6) {
+      setPwError("New password must be at least 6 characters");
+      return;
+    }
+    if (pwForm.newPassword !== pwForm.confirm) {
+      setPwError("Passwords don't match");
+      return;
+    }
+    setPwError("");
+    setPwSaving(true);
+    try {
+      await api.put("/restaurant/change-password", {
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.newPassword,
+      });
+      flash("Password updated");
+      setShowPwChange(false);
+      setPwForm({ currentPassword: "", newPassword: "", confirm: "" });
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setPwError(msg ?? "Failed to change password");
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">Restaurant profile</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Guests see your logo and name when they scan a table QR. Brand colours tint buttons and accents.</p>
+        </div>
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.98 }}
+          onClick={saveProfile}
+          disabled={saving || !dirty}
+          className="inline-flex items-center justify-center gap-2 font-semibold text-sm px-4 py-2.5 rounded-xl text-white shadow-sm disabled:opacity-40 disabled:pointer-events-none"
+          style={{ background: accent }}
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Save changes
+        </motion.button>
       </div>
 
-      {/* Change Password */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <button onClick={() => setShowPwChange(!showPwChange)} className="flex items-center justify-between w-full">
-          <h3 className="font-semibold text-slate-800 text-sm">Change Password</h3>
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showPwChange ? "rotate-180" : ""}`} />
-        </button>
-        <AnimatePresence>
-          {showPwChange && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="grid gap-2.5 mt-3">
-                <input type="password" value={pwForm.currentPassword} onChange={(e) => { setPwForm(s => ({ ...s, currentPassword: e.target.value })); setPwError(""); }}
-                  placeholder="Current password" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-                <input type="password" value={pwForm.newPassword} onChange={(e) => { setPwForm(s => ({ ...s, newPassword: e.target.value })); setPwError(""); }}
-                  placeholder="New password (min 6 chars)" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-                <input type="password" value={pwForm.confirm} onChange={(e) => { setPwForm(s => ({ ...s, confirm: e.target.value })); setPwError(""); }}
-                  placeholder="Confirm new password" className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200" />
-                {pwError && <p className="text-red-500 text-xs">{pwError}</p>}
-                <button onClick={changePassword} disabled={pwSaving || !pwForm.currentPassword || !pwForm.newPassword || !pwForm.confirm}
-                  className="text-sm font-medium px-4 py-2 rounded-lg text-white transition-all disabled:opacity-40"
-                  style={{ background: accent }}>
-                  {pwSaving ? "Updating..." : "Update Password"}
-                </button>
-              </div>
-            </motion.div>
+      {/* Hero preview — mirrors guest experience */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="h-28 relative" style={{ background: `linear-gradient(135deg, ${draft.brandPrimaryColor}, ${draft.brandSecondaryColor})` }}>
+          <div className="absolute inset-0 bg-black/10" />
+          <div className="absolute bottom-4 left-4 flex items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center overflow-hidden ring-4 ring-white/80">
+              {draft.logo ? (
+                <img src={draft.logo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-bold text-slate-400">{draft.name.charAt(0).toUpperCase() || "?"}</span>
+              )}
+            </div>
+            <div className="text-white drop-shadow-sm">
+              <div className="text-lg font-bold leading-tight">{draft.name || "Restaurant name"}</div>
+              <div className="text-xs text-white/90">Customer preview</div>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 flex flex-wrap gap-2 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2.5 py-1">
+            <Palette className="w-3 h-3" /> Primary <span className="font-mono">{draft.brandPrimaryColor}</span>
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2.5 py-1">
+            Secondary <span className="font-mono">{draft.brandSecondaryColor}</span>
+          </span>
+          {dirty && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 px-2.5 py-1 font-medium">Unsaved changes</span>
           )}
-        </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-sky-500" /> Logo
+            </h3>
+            <p className="text-[11px] text-slate-400 mb-3">PNG or JPG recommended. Appears on the guest QR experience.</p>
+            <button
+              type="button"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setLogoDrag(true);
+              }}
+              onDragLeave={() => setLogoDrag(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setLogoDrag(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) readLogoFile(file);
+              }}
+              onClick={() => logoInputRef.current?.click()}
+              className={`w-full aspect-square max-h-48 mx-auto rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer ${
+                logoDrag ? "border-sky-400 bg-sky-50/50" : "border-slate-200 bg-slate-50/80 hover:border-slate-300"
+              }`}
+            >
+              {draft.logo ? (
+                <img src={draft.logo} alt="" className="max-h-[85%] max-w-[85%] object-contain rounded-lg" />
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-slate-300" />
+                  <span className="text-xs font-medium text-slate-500">Drop or click to upload</span>
+                </>
+              )}
+            </button>
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) readLogoFile(f); e.target.value = ""; }} />
+            {draft.logo && (
+              <button
+                type="button"
+                onClick={() => markDirty({ ...draft, logo: "" })}
+                className="mt-3 w-full text-xs font-semibold py-2 rounded-lg border border-red-100 text-red-600 hover:bg-red-50 transition-colors"
+              >
+                Remove logo
+              </button>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-violet-500" /> Guest experience colours
+            </h3>
+            <div className="grid gap-3">
+              <label className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                <span>Primary accent</span>
+                <span className="flex items-center gap-2 font-mono text-slate-700">
+                  <input
+                    type="color"
+                    value={draft.brandPrimaryColor}
+                    onChange={(e) => markDirty({ ...draft, brandPrimaryColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  {draft.brandPrimaryColor}
+                </span>
+              </label>
+              <label className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                <span>Secondary</span>
+                <span className="flex items-center gap-2 font-mono text-slate-700">
+                  <input
+                    type="color"
+                    value={draft.brandSecondaryColor}
+                    onChange={(e) => markDirty({ ...draft, brandSecondaryColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  {draft.brandSecondaryColor}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-3 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-800">Venue details</h3>
+            <input
+              value={draft.name}
+              onChange={(e) => markDirty({ ...draft, name: e.target.value })}
+              placeholder="Restaurant name"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 font-medium"
+            />
+            <textarea
+              value={draft.description}
+              onChange={(e) => markDirty({ ...draft, description: e.target.value })}
+              placeholder="Short welcome blurb — optional, visible in your materials"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 min-h-[88px] resize-y text-slate-600"
+            />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <input
+                value={draft.address}
+                onChange={(e) => markDirty({ ...draft, address: e.target.value })}
+                placeholder="Address"
+                className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
+              />
+              <input
+                value={draft.phone}
+                onChange={(e) => markDirty({ ...draft, phone: e.target.value })}
+                placeholder="Phone"
+                type="tel"
+                className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+            <button type="button" onClick={() => setShowPwChange(!showPwChange)} className="flex items-center justify-between w-full text-left">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-400" /> Account password
+              </h3>
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showPwChange ? "rotate-180" : ""}`} />
+            </button>
+            <AnimatePresence>
+              {showPwChange && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid gap-2.5 mt-3 pt-3 border-t border-slate-100">
+                    <input
+                      type="password"
+                      value={pwForm.currentPassword}
+                      onChange={(e) => {
+                        setPwForm((s) => ({ ...s, currentPassword: e.target.value }));
+                        setPwError("");
+                      }}
+                      placeholder="Current password"
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    />
+                    <input
+                      type="password"
+                      value={pwForm.newPassword}
+                      onChange={(e) => {
+                        setPwForm((s) => ({ ...s, newPassword: e.target.value }));
+                        setPwError("");
+                      }}
+                      placeholder="New password (min 6 characters)"
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    />
+                    <input
+                      type="password"
+                      value={pwForm.confirm}
+                      onChange={(e) => {
+                        setPwForm((s) => ({ ...s, confirm: e.target.value }));
+                        setPwError("");
+                      }}
+                      placeholder="Confirm new password"
+                      className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    />
+                    {pwError && <p className="text-red-500 text-xs">{pwError}</p>}
+                    <button
+                      type="button"
+                      onClick={changePassword}
+                      disabled={pwSaving || !pwForm.currentPassword || !pwForm.newPassword || !pwForm.confirm}
+                      className="text-sm font-semibold px-4 py-2.5 rounded-xl text-white transition-all disabled:opacity-40"
+                      style={{ background: accent }}
+                    >
+                      {pwSaving ? "Updating…" : "Update password"}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
   );

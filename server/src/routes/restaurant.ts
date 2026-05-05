@@ -16,10 +16,64 @@ router.get("/profile", async (req, res) => {
   res.json(restaurant);
 });
 
+const MAX_PROFILE_LOGO_BYTES = 4_500_000; // base64 payload cap (~3.3MB decoded)
+
 router.put("/profile", async (req, res) => {
+  const b = req.body as Record<string, unknown>;
+  const updateData: {
+    name?: string;
+    description?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    brandPrimaryColor?: string;
+    brandSecondaryColor?: string;
+    logo?: string | null;
+  } = {};
+
+  if ("name" in b) {
+    if (typeof b.name !== "string" || !b.name.trim()) return res.status(400).json({ message: "Restaurant name is required" });
+    updateData.name = b.name.trim();
+  }
+  if ("description" in b) {
+    if (b.description === null) updateData.description = null;
+    else if (typeof b.description === "string") updateData.description = b.description || null;
+    else return res.status(400).json({ message: "Invalid description" });
+  }
+  if ("address" in b) {
+    if (b.address === null) updateData.address = null;
+    else if (typeof b.address === "string") updateData.address = b.address || null;
+    else return res.status(400).json({ message: "Invalid address" });
+  }
+  if ("phone" in b) {
+    if (b.phone === null) updateData.phone = null;
+    else if (typeof b.phone === "string") updateData.phone = b.phone || null;
+    else return res.status(400).json({ message: "Invalid phone" });
+  }
+  if ("brandPrimaryColor" in b) {
+    const c = b.brandPrimaryColor;
+    if (typeof c !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(c)) return res.status(400).json({ message: "Invalid primary colour" });
+    updateData.brandPrimaryColor = c;
+  }
+  if ("brandSecondaryColor" in b) {
+    const c = b.brandSecondaryColor;
+    if (typeof c !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(c)) return res.status(400).json({ message: "Invalid secondary colour" });
+    updateData.brandSecondaryColor = c;
+  }
+  if ("logo" in b) {
+    const logo = b.logo;
+    if (logo === null || logo === "") updateData.logo = null;
+    else if (typeof logo === "string") {
+      if (!logo.startsWith("data:image/")) return res.status(400).json({ message: "Logo must be an image file" });
+      if (logo.length > MAX_PROFILE_LOGO_BYTES) return res.status(400).json({ message: "Logo is too large — use a smaller image" });
+      updateData.logo = logo;
+    } else return res.status(400).json({ message: "Invalid logo" });
+  }
+
+  if (Object.keys(updateData).length === 0) return res.status(400).json({ message: "No valid fields to update" });
+
   const restaurant = await prisma.restaurant.update({
     where: { id: req.user?.restaurantId ?? "" },
-    data: req.body,
+    data: updateData,
   });
   res.json(restaurant);
 });
