@@ -538,17 +538,11 @@ function ProfileTab({
             </div>
           </div>
         </div>
-        <div className="p-4 flex flex-wrap gap-2 text-xs">
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2.5 py-1">
-            <Palette className="w-3 h-3" /> Primary <span className="font-mono">{draft.brandPrimaryColor}</span>
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2.5 py-1">
-            Secondary <span className="font-mono">{draft.brandSecondaryColor}</span>
-          </span>
-          {dirty && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 px-2.5 py-1 font-medium">Unsaved changes</span>
-          )}
-        </div>
+        {dirty && (
+          <div className="p-3 border-t border-slate-100 text-xs font-medium text-amber-700 bg-amber-50">
+            You have unsaved profile changes.
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">

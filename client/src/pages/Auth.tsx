@@ -24,9 +24,6 @@ export function Home() {
           <Link to="/login" className="flex items-center justify-between w-full px-5 py-3.5 bg-sky-500 text-white rounded-xl font-semibold text-sm hover:bg-sky-600 transition-colors">
             <span>Sign In</span><ArrowRight className="w-4 h-4" />
           </Link>
-          <Link to="/register" className="flex items-center justify-between w-full px-5 py-3.5 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-50 transition-colors">
-            <span>Create Account</span><ArrowRight className="w-4 h-4" />
-          </Link>
           <Link to="/bootstrap-super-admin" className="flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mt-4 transition-colors">
             <Shield className="w-3 h-3" /> Setup Super Admin
           </Link>
@@ -74,7 +71,6 @@ export function Login() {
               {loading && <Loader2 className="w-4 h-4 animate-spin" />} Sign In
             </button>
           </form>
-          <div className="text-center mt-4 text-sm text-slate-400">No account? <Link to="/register" className="text-sky-500 font-medium hover:underline">Register</Link></div>
         </Card>
       </motion.div>
     </div>
